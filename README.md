@@ -1,74 +1,101 @@
-# GiftPool — Minimal Trustless Group-Gift Escrow on Solana
+# GiftPool — Trustless Group-Gift Escrow on Solana
 
-GiftPool is a minimal on-chain system for organizing shared gift pools. Friends contribute SOL to a program-controlled vault, and the pool either settles when the goal is reached or refunds contributors if the deadline passes without success.
+GiftPool is an Anchor program for organizing shared SOL gift pools. Contributors send SOL into a program-controlled vault PDA, the organizer can finalize a successful pool, and contributors can independently refund themselves when a pool misses its deadline and target.
 
-## The Problem
+Program ID: `88S4CSoaugjP3W6mFHq69vmHHa3J7xTaLrE21fzcCxDj`
 
-Today, group gifting works like this: one person collects money via bank transfers or Blik, keeps a manual spreadsheet, and everyone trusts them to not spend it or lose track. There is no transparency, no automatic settlement, and no easy way to get money back if the plan falls through.
+Network: Solana Devnet
 
-## The Solution on Solana
+## What It Solves
 
-GiftPool replaces the trusted organizer with a neutral on-chain escrow:
+Group gifting usually depends on one person collecting money manually, tracking transfers, and deciding what happens if the plan fails. GiftPool moves those rules on-chain:
 
-- **Organizer** creates a pool with a target amount and a deadline.
-- **Contributors** deposit SOL directly into a program-controlled vault (PDA).
-- **Finalize**: if the target is met, the organizer can release the funds to a chosen receiver.
-- **Refund**: if the deadline passes and the target is not met, anyone can claim their own refund — no organizer permission needed.
+- Pool state is public.
+- SOL is held by a PDA vault, not by a private wallet.
+- Settlement and refunds are enforced by the program.
+- Contributors do not need organizer permission to claim a valid refund.
 
-All state is public and immutable. The program enforces the rules, not a person.
-
-## Architecture
+## Solana Architecture
 
 ### Accounts
 
-| Account | Type | Purpose |
-|---------|------|---------|
-| `PoolAccount` | PDA | Stores organizer, receiver, target, deadline, total contributed, status, bump. |
-| `ContributionAccount` | PDA | Per-user record of how much they contributed and whether they refunded. |
-| `Vault` | SystemAccount PDA | Holds the pooled SOL. Only the program can sign transfers from it. |
+| Account | PDA seeds | Purpose |
+|---------|-----------|---------|
+| `PoolAccount` | `["pool", organizer, seed]` | Pool metadata, organizer, target, deadline, total contributed, status, bump. |
+| `ContributionAccount` | `["contribution", pool, contributor]` | Per-contributor amount, refund flag, bump. |
+| `Vault` | `["vault", pool]` | System-owned PDA address holding pooled SOL. Program transfers from it with `invoke_signed`. |
 
-### State Machine
+### Pool State Machine
 
-```
-Open → Succeeded (finalize, total >= target)
-Open → Refunding (first refund after deadline, total < target)
-Succeeded → Closed (funds transferred to receiver)
-Refunding → Closed (all refunds claimed)
+```text
+Open -> Closed
+  finalize_pool, organizer signer, total_contributed >= target_amount
+
+Open -> Refunding
+  first valid refund, deadline passed, total_contributed < target_amount
+
+Refunding -> Closed
+  last refund, total_contributed == 0
 ```
 
 ### Instructions
 
-1. `create_pool(seed, name, target_amount, deadline)` — creates `PoolAccount` and `Vault` PDA.
-2. `contribute(amount)` — transfers SOL to vault, updates `PoolAccount` and `ContributionAccount`.
-3. `finalize_pool()` — transfers all SOL from vault to receiver, sets status to `Closed`. Only organizer, only when target met.
-4. `refund_contribution()` — transfers a user's contribution back to them. Only after deadline, only if target not met, only once per user.
+1. `create_pool(seed, name, target_amount, deadline)`
+   - Creates `PoolAccount`.
+   - Derives the vault PDA.
+   - Validates name length, positive target, and future deadline.
+   - Sets `receiver` to the organizer for now.
 
-### PDAs
+2. `contribute(amount)`
+   - Requires `PoolStatus::Open`.
+   - Requires current time to be before `deadline`.
+   - Transfers SOL from contributor to vault via the System Program.
+   - Uses `init_if_needed` for the contributor's PDA so repeated contributions accumulate in one account.
 
-- Pool: `sha256(["pool", organizer, seed])`
-- Vault: `sha256(["vault", pool])`
-- Contribution: `sha256(["contribution", pool, contributor])`
+3. `finalize_pool()`
+   - Requires organizer signer.
+   - Requires `PoolStatus::Open`.
+   - Requires `total_contributed >= target_amount`.
+   - Transfers tracked pool SOL from vault to the provided receiver account with `invoke_signed`.
+   - Sets status to `Closed`.
 
-## Why Solana
+4. `refund_contribution()`
+   - Requires `PoolStatus::Open` or `PoolStatus::Refunding`.
+   - Requires `deadline` to have passed.
+   - Requires `total_contributed < target_amount`.
+   - Requires the caller's contribution to be unrefunded.
+   - Transfers the caller's contribution from vault back to the caller with `invoke_signed`.
+   - Sets status to `Closed` once all tracked contributions are refunded.
 
-| Feature | Why it matters |
-|---------|----------------|
-| **Cheap transactions** | Tracking a $20 gift pool is economically viable. |
-| **PDA + invoke_signed** | The program can hold and release SOL without a private key. |
-| **Deterministic state** | Everyone sees the same target, deadline, and total. No spreadsheet disputes. |
-| **Permissionless refunds** | Users don't need the organizer's cooperation to get their money back. |
+## Solana Ecosystem Fit
 
-## Tradeoffs & Constraints
+The program uses the core Solana patterns expected for this type of escrow:
 
-- **Privacy**: pool names, amounts, and contributors are public on-chain.
-- **No SPL tokens**: MVP uses SOL only to keep scope minimal.
-- **No partial payouts**: the organizer receives the full pool or nothing.
-- **No dispute resolution**: the program does not handle disagreements about the gift choice.
-- **Gas fees**: contributors pay a small fee per transaction (~0.000005 SOL on Devnet).
+- **PDAs for deterministic authority**: pool, vault, and contribution addresses are derived from stable seeds.
+- **PDA signing via `invoke_signed`**: the vault has no private key; only the program can authorize transfers from it.
+- **Anchor account constraints**: signer checks, PDA seed checks, status checks, and custom errors live close to account validation.
+- **Checked arithmetic**: contribution totals use checked add/sub operations.
+- **One contribution PDA per contributor per pool**: this keeps refunds permissionless and easy to verify.
+
+## Current MVP Constraints
+
+- **SOL only**: SPL tokens are not supported yet.
+- **Public data**: pool names, amounts, deadlines, and contributor records are public on-chain.
+- **Organizer-controlled final receiver**: only the organizer can finalize, but the receiver account is currently supplied during `finalize_pool`. `PoolAccount.receiver` is initialized to the organizer and reserved for a stricter receiver model.
+- **Tracked vault amount**: finalize transfers `pool.total_contributed`. SOL sent directly to the vault outside `contribute` is not tracked by the pool.
+- **No account closing flow**: contribution accounts remain on-chain after refund. This is acceptable for an MVP, but a production version should close refunded contribution accounts and return rent.
+- **No emitted Anchor events yet**: clients currently rely on account fetches and transaction logs.
 
 ## Devnet Deployment
 
 Program ID: `88S4CSoaugjP3W6mFHq69vmHHa3J7xTaLrE21fzcCxDj`
+
+`Anchor.toml` includes both localnet and devnet program mappings. The default provider cluster is localnet for tests; pass `--provider.cluster devnet` for devnet deploys and manual devnet work.
+
+```bash
+anchor build
+anchor deploy --provider.cluster devnet
+```
 
 ### Demo Transactions
 
@@ -89,56 +116,81 @@ Program ID: `88S4CSoaugjP3W6mFHq69vmHHa3J7xTaLrE21fzcCxDj`
 | Contribute 2 SOL | `5FeoAK1u7hemDycDR4kF3J2b2rCAeHzSYpzhnHwSu7saoyn89GEHc7NMN5AGbPF7S6kA8kvH1BMhiAbsSH8yCjPH` | https://explorer.solana.com/tx/5FeoAK1u7hemDycDR4kF3J2b2rCAeHzSYpzhnHwSu7saoyn89GEHc7NMN5AGbPF7S6kA8kvH1BMhiAbsSH8yCjPH?cluster=devnet |
 | Refund | `2qYtMZ3M2LxcuBGH4Z6MZFVR6L79DDMdyEsyf8PrbnLF3kJh4tydDqnhXuDDj7JF7QKgZSMs2JKcC54tUEyUx9g6` | https://explorer.solana.com/tx/2qYtMZ3M2LxcuBGH4Z6MZFVR6L79DDMdyEsyf8PrbnLF3kJh4tydDqnhXuDDj7JF7QKgZSMs2JKcC54tUEyUx9g6?cluster=devnet |
 
+## Local Development
+
+### Prerequisites
+
+- Anchor CLI `0.32.1`
+- Solana CLI / Agave CLI
+- Rust `1.89.0`
+- Node.js with npm
+
+### Commands
+
+```bash
+# Build the Anchor program and regenerate IDL/types
+anchor build
+
+# Run local validator integration tests
+anchor test
+
+# Run the React frontend
+cd app/web
+npm install
+npm run dev
+```
+
+## Tests
+
+The Anchor integration suite lives in `tests/giftpool.ts`.
+
+Covered behavior:
+
+- Create pool.
+- Contribute from one user.
+- Accumulate contributions from another user.
+- Finalize a successful pool.
+- Refund a failed pool after deadline.
+- Reject refund before deadline even when target is not met.
+- Reject refund after deadline when the target was met.
+- Close a failed pool once all tracked contributions are refunded.
+
 ## CLI Client
 
 A minimal TypeScript CLI is included in `app/cli.ts`.
 
 ```bash
-# Create a pool
-npx ts-node --transpile-only app/cli.ts create <seed> <name> <target> <deadline>
-
-# Contribute
-npx ts-node --transpile-only app/cli.ts contribute <pool> <amount>
-
-# Finalize
-npx ts-node --transpile-only app/cli.ts finalize <pool> [receiver]
-
-# Refund
-npx ts-node --transpile-only app/cli.ts refund <pool>
-
-# Info
-npx ts-node --transpile-only app/cli.ts info <pool>
+npx ts-node --transpile-only app/cli.ts create <seed> <name> <target_lamports> <deadline_unix>
+npx ts-node --transpile-only app/cli.ts contribute <pool_pubkey> <amount_lamports>
+npx ts-node --transpile-only app/cli.ts finalize <pool_pubkey> [receiver_pubkey]
+npx ts-node --transpile-only app/cli.ts refund <pool_pubkey>
+npx ts-node --transpile-only app/cli.ts info <pool_pubkey>
 ```
 
-## Running Tests
+The CLI loads `~/.config/solana/id.json` and connects to Devnet.
 
-```bash
-anchor test
+## Repository Structure
+
+```text
+programs/giftpool/src/
+  lib.rs                         Anchor account contexts and instruction handlers
+  errors.rs                      Program error codes
+  state/
+    pool_account.rs              PoolAccount and PoolStatus
+    contribution_account.rs      ContributionAccount
+tests/giftpool.ts                Anchor integration tests
+app/cli.ts                       Devnet CLI client
+app/web/                         React frontend
+Anchor.toml                      Anchor workspace, localnet/devnet program IDs, test script
 ```
 
-Tests cover:
-- Happy path: create → contribute → contribute → finalize
-- Refund path: create → contribute → wait for deadline → refund
+## Hardening Backlog
 
-## Repo Structure
-
-```
-├── programs/giftpool/src/
-│   ├── lib.rs              # Program entry point, account structs, instructions
-│   ├── state/              # PoolAccount, ContributionAccount, PoolStatus enum
-│   └── errors.rs           # Shared error codes
-├── tests/giftpool.ts       # Anchor test suite
-├── app/cli.ts              # Minimal CLI client
-├── Anchor.toml
-└── README.md
-```
-
-## Tech Stack
-
-- **Language**: Rust (Anchor 0.32.1)
-- **Network**: Solana Devnet
-- **Client**: TypeScript + Anchor
-- **Tests**: Mocha + Chai
+- Decide the receiver model: either enforce `pool.receiver` during finalize or add a receiver parameter to `create_pool`.
+- Emit Anchor events for pool creation, contributions, finalization, and refunds.
+- Add contribution account closing after refund to return rent.
+- Add a strategy for accidental direct SOL transfers to the vault PDA.
+- Add negative tests for unauthorized finalize, zero amounts, invalid deadlines, duplicate seeds, and contribution after deadline.
 
 ## License
 

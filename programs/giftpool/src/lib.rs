@@ -230,7 +230,7 @@ pub mod giftpool {
 
         let now = Clock::get()?.unix_timestamp;
         require!(
-            now >= pool.deadline || pool.total_contributed < pool.target_amount,
+            now >= pool.deadline && pool.total_contributed < pool.target_amount,
             GiftPoolError::RefundNotYetAllowed
         );
 
@@ -266,6 +266,10 @@ pub mod giftpool {
             .total_contributed
             .checked_sub(amount)
             .ok_or(GiftPoolError::MathOverflow)?;
+
+        if pool.total_contributed == 0 {
+            pool.status = PoolStatus::Closed;
+        }
 
         msg!(
             "Refunded {} lamports to contributor {}",
