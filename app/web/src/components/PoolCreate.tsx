@@ -1,28 +1,43 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, ArrowRight } from 'lucide-react'
-import { useProgram, derivePoolPda, deriveVaultPda, solToLamports } from '../hooks/useProgram'
+import { Plus, ArrowRight, RefreshCw } from 'lucide-react'
+import { useProgram, derivePoolPda, deriveVaultPda, solToLamports, explorerTxUrl } from '../hooks/useProgram'
 import { useToast } from './ui/Toast'
 import { Button } from './ui/Button'
 import { Input } from './ui/Input'
 import { Card } from './ui/Card'
 import { BN } from '@coral-xyz/anchor'
 import { PublicKey } from '@solana/web3.js'
+import { validateCreatePoolDraft } from '../lib/pools'
+import type { PoolView } from '../types/pool'
 
 interface PoolCreateProps {
-  onCreated: (pool: any) => void
+  onCreated: (pool: PoolView) => void
 }
 
 export function PoolCreate({ onCreated }: PoolCreateProps) {
-  const { program, wallet } = useProgram()
+  const { program, wallet, fetchPool } = useProgram()
   const { toast } = useToast()
   const [step, setStep] = useState(0)
   const [loading, setLoading] = useState(false)
 
-  const [seed, setSeed] = useState('1')
+  const [seed, setSeed] = useState(() => String(Date.now()))
   const [name, setName] = useState('')
+  const [receiver, setReceiver] = useState('')
   const [target, setTarget] = useState('1')
   const [deadlineHours, setDeadlineHours] = useState('24')
+
+  const receiverValue = receiver.trim()
+  const validation = validateCreatePoolDraft({
+    name,
+    seed,
+    targetSol: target,
+    deadlineHours,
+    receiver,
+  })
+  const errors = validation.errors
+
+  const regenerateSeed = () => setSeed(String(Date.now()))
 
   const steps = [
     {
@@ -35,23 +50,41 @@ export function PoolCreate({ onCreated }: PoolCreateProps) {
           onChange={(e) => setName(e.target.value)}
           placeholder="e.g. Birthday Gift for Alice"
           fullWidth
-          error={name.length > 0 && name.length < 3 ? 'At least 3 characters' : undefined}
+          error={name.length > 0 ? errors.name : undefined}
         />
       ),
-      canNext: name.length >= 3,
+      canNext: !errors.name,
     },
     {
       title: 'Set the goal',
       desc: 'How much SOL do you need?',
       fields: (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-          <Input
-            label="Seed"
-            value={seed}
-            onChange={(e) => setSeed(e.target.value)}
-            type="number"
-            min={1}
-          />
+          <div>
+            <Input
+              label="Seed"
+              value={seed}
+              onChange={(e) => setSeed(e.target.value)}
+              type="number"
+              min={1}
+              error={errors.seed}
+            />
+            <button
+              type="button"
+              onClick={regenerateSeed}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                marginTop: 8,
+                color: 'var(--text-muted)',
+                fontSize: 'var(--text-xs)',
+                fontWeight: 800,
+              }}
+            >
+              <RefreshCw size={12} /> New seed
+            </button>
+          </div>
           <Input
             label="Target (SOL)"
             value={target}
@@ -59,10 +92,26 @@ export function PoolCreate({ onCreated }: PoolCreateProps) {
             type="number"
             step="0.1"
             min="0.1"
+            error={errors.targetSol}
           />
         </div>
       ),
-      canNext: Number(seed) >= 1 && Number(target) >= 0.1,
+      canNext: !errors.seed && !errors.targetSol,
+    },
+    {
+      title: 'Choose receiver',
+      desc: 'Who receives funds after the target is met?',
+      fields: (
+        <Input
+          label="Receiver wallet"
+          value={receiver}
+          onChange={(e) => setReceiver(e.target.value)}
+          placeholder={wallet?.publicKey?.toBase58() || 'Defaults to your wallet'}
+          fullWidth
+          error={receiverValue ? errors.receiver : undefined}
+        />
+      ),
+      canNext: !errors.receiver,
     },
     {
       title: 'Set a deadline',
@@ -74,9 +123,10 @@ export function PoolCreate({ onCreated }: PoolCreateProps) {
           onChange={(e) => setDeadlineHours(e.target.value)}
           type="number"
           min={1}
+          error={errors.deadlineHours}
         />
       ),
-      canNext: Number(deadlineHours) >= 1,
+      canNext: !errors.deadlineHours,
     },
     {
       title: 'Ready to create',
@@ -104,13 +154,17 @@ export function PoolCreate({ onCreated }: PoolCreateProps) {
               <div style={{ fontWeight: 600 }}>{seed}</div>
             </div>
             <div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 'var(--text-xs)', marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Receiver</div>
+              <div style={{ fontWeight: 600, overflowWrap: 'anywhere' }}>{receiverValue || wallet?.publicKey?.toBase58() || 'Your wallet'}</div>
+            </div>
+            <div>
               <div style={{ color: 'var(--text-muted)', fontSize: 'var(--text-xs)', marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Deadline</div>
               <div style={{ fontWeight: 600 }}>{deadlineHours} hours</div>
             </div>
           </div>
         </div>
       ),
-      canNext: true,
+      canNext: validation.canSubmit,
     },
   ]
 
@@ -121,21 +175,33 @@ export function PoolCreate({ onCreated }: PoolCreateProps) {
       toast({ type: 'error', message: 'Connect your wallet first' })
       return
     }
+    if (!validation.canSubmit) {
+      toast({ type: 'error', message: 'Fix the highlighted fields first' })
+      return
+    }
     setLoading(true)
     try {
       const seedBn = new BN(seed)
       const targetBn = solToLamports(Number(target))
       const deadline = new BN(Math.floor(Date.now() / 1000) + Number(deadlineHours) * 3600)
+      const receiverPk = receiverValue ? new PublicKey(receiverValue) : wallet.publicKey
       const pool = derivePoolPda(wallet.publicKey, seedBn)
       const vault = deriveVaultPda(pool)
-      await program.methods
-        .createPool(seedBn, name, targetBn, deadline)
+      const signature = await program.methods
+        .createPool(seedBn, name, targetBn, deadline, receiverPk)
         .accounts({ organizer: wallet.publicKey, pool, vault, systemProgram: PublicKey.default })
         .rpc()
-      toast({ type: 'success', message: 'Pool created!', description: pool.toBase58() })
-      onCreated({ address: pool, name, targetAmount: targetBn, totalContributed: new BN(0), deadline, status: { open: {} }, organizer: wallet.publicKey })
-    } catch (e: any) {
-      toast({ type: 'error', message: 'Failed to create pool', description: e?.message?.slice(0, 80) })
+      toast({
+        type: 'success',
+        message: 'Pool created!',
+        description: pool.toBase58(),
+        actionLabel: 'View on Explorer',
+        actionHref: explorerTxUrl(signature),
+      })
+      const fetched = await fetchPool(pool)
+      onCreated(fetched ?? { address: pool, name, targetAmount: targetBn, totalContributed: new BN(0), deadline, status: { open: {} }, organizer: wallet.publicKey, receiver: receiverPk, seed: seedBn })
+    } catch (error) {
+      toast({ type: 'error', message: 'Failed to create pool', description: error instanceof Error ? error.message.slice(0, 80) : undefined })
     } finally {
       setLoading(false)
     }
@@ -186,7 +252,7 @@ export function PoolCreate({ onCreated }: PoolCreateProps) {
               Next
             </Button>
           ) : (
-            <Button variant="primary" onClick={handleCreate} loading={loading} icon={<Plus size={16} />}>
+            <Button variant="primary" onClick={handleCreate} loading={loading} disabled={!validation.canSubmit} icon={<Plus size={16} />}>
               Create Pool
             </Button>
           )}

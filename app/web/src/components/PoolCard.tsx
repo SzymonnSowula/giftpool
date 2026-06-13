@@ -4,25 +4,19 @@ import { Badge } from './ui/Badge'
 import { Progress } from './ui/Progress'
 import { lamportsToSol } from '../hooks/useProgram'
 import { useToast } from './ui/Toast'
+import { getPoolPhase, numericValueToNumber, publicKeyToString } from '../lib/pools'
+import type { PoolView } from '../types/pool'
 
-export function PoolCard({ pool, onClick, index }: { pool: any; onClick: () => void; index: number }) {
+export function PoolCard({ pool, onClick, index }: { pool: PoolView; onClick: () => void; index: number }) {
   const { toast } = useToast()
-  const status = pool.status ? Object.keys(pool.status)[0] : 'unknown'
-  const now = Math.floor(Date.now() / 1000)
-  const isDeadlinePassed = pool.deadline?.toNumber() < now
-  const progress = pool.targetAmount?.toNumber() > 0
-    ? (pool.totalContributed?.toNumber() / pool.targetAmount?.toNumber()) * 100
-    : 0
-
-  const statusMap: Record<string, 'success' | 'warning' | 'error' | 'info' | 'neutral'> = {
-    open: 'info',
-    refunding: 'warning',
-    closed: 'neutral',
-  }
+  const phase = getPoolPhase(pool)
+  const target = numericValueToNumber(pool.targetAmount)
+  const total = numericValueToNumber(pool.totalContributed)
+  const progress = target > 0 ? (total / target) * 100 : 0
 
   const handleShare = async (e: React.MouseEvent) => {
     e.stopPropagation()
-    const addr = pool.address?.toBase58?.() || pool.address
+    const addr = publicKeyToString(pool.address)
     if (!addr) return
     
     const url = `${window.location.origin}?pool=${addr}`
@@ -30,7 +24,7 @@ export function PoolCard({ pool, onClick, index }: { pool: any; onClick: () => v
     try {
       await navigator.clipboard.writeText(url)
       toast({ type: 'success', message: 'Link copied to clipboard!' })
-    } catch (err) {
+    } catch {
       const textArea = document.createElement('textarea')
       textArea.value = url
       document.body.appendChild(textArea)
@@ -95,12 +89,12 @@ export function PoolCard({ pool, onClick, index }: { pool: any; onClick: () => v
           >
             <Share2 size={14} />
           </button>
-          <Badge type={statusMap[status] || 'neutral'}>{status}</Badge>
+          <Badge type={phase.badgeType}>{phase.label}</Badge>
         </div>
       </div>
 
       <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', marginBottom: 16, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-        {pool.address?.toBase58?.() || pool.address}
+        {publicKeyToString(pool.address)}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 16px', marginBottom: 16 }}>
@@ -116,17 +110,17 @@ export function PoolCard({ pool, onClick, index }: { pool: any; onClick: () => v
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             <Users size={12} /> Raised
           </div>
-          <div style={{ fontSize: 'var(--text-md)', fontWeight: 700, color: progress >= 100 ? 'var(--success)' : 'var(--text)' }}>
+          <div style={{ fontSize: 'var(--text-md)', fontWeight: 700, color: phase.targetMet ? 'var(--success)' : 'var(--text)' }}>
             {lamportsToSol(pool.totalContributed)} <span style={{ fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--text-muted)' }}>SOL</span>
           </div>
         </div>
         <div style={{ gridColumn: '1 / -1' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            <Clock size={12} /> {isDeadlinePassed ? 'Deadline passed' : 'Deadline'}
+            <Clock size={12} /> {phase.deadlinePassed ? 'Deadline passed' : 'Deadline'}
           </div>
-          <div style={{ fontSize: 'var(--text-sm)', color: isDeadlinePassed ? 'var(--error)' : 'var(--text-secondary)', fontWeight: 500 }}>
-            {isDeadlinePassed ? 'Expired' : (() => {
-              const deadlineNum = pool.deadline?.toNumber?.() ?? Number(pool.deadline) ?? 0
+          <div style={{ fontSize: 'var(--text-sm)', color: phase.deadlinePassed ? 'var(--error)' : 'var(--text-secondary)', fontWeight: 500 }}>
+            {phase.deadlinePassed ? phase.label : (() => {
+              const deadlineNum = numericValueToNumber(pool.deadline)
               return new Date(deadlineNum * 1000).toLocaleString('pl-PL', {
                 day: '2-digit',
                 month: '2-digit',
@@ -139,10 +133,10 @@ export function PoolCard({ pool, onClick, index }: { pool: any; onClick: () => v
         </div>
       </div>
 
-      <Progress value={pool.totalContributed?.toNumber()} max={pool.targetAmount?.toNumber()} color={progress >= 100 ? 'var(--success)' : 'var(--accent)'} />
+      <Progress value={total} max={target} color={phase.targetMet ? 'var(--success)' : 'var(--accent)'} />
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
         <span>{Math.round(Math.min(100, progress))}% complete</span>
-        <span>{lamportsToSol(Math.max(0, pool.targetAmount?.toNumber() - pool.totalContributed?.toNumber()))} SOL left</span>
+        <span>{lamportsToSol(Math.max(0, target - total))} SOL left</span>
       </div>
     </motion.div>
   )

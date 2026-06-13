@@ -3,7 +3,9 @@ import { Giftpool } from "../target/types/giftpool";
 import * as fs from "fs";
 import * as path from "path";
 
-const PROGRAM_ID = new web3.PublicKey("88S4CSoaugjP3W6mFHq69vmHHa3J7xTaLrE21fzcCxDj");
+const PROGRAM_ID = new web3.PublicKey(
+  "88S4CSoaugjP3W6mFHq69vmHHa3J7xTaLrE21fzcCxDj"
+);
 
 function getProvider() {
   const home = process.env.HOME || "/home/szymon";
@@ -11,7 +13,10 @@ function getProvider() {
   const keypair = web3.Keypair.fromSecretKey(
     Uint8Array.from(JSON.parse(fs.readFileSync(keypairPath, "utf-8")))
   );
-  const connection = new web3.Connection("https://api.devnet.solana.com", "confirmed");
+  const connection = new web3.Connection(
+    "https://api.devnet.solana.com",
+    "confirmed"
+  );
   const wallet = new Wallet(keypair);
   return new AnchorProvider(connection, wallet, { commitment: "confirmed" });
 }
@@ -23,7 +28,11 @@ function getProgram(provider: AnchorProvider) {
 
 function derivePoolPda(organizer: web3.PublicKey, seed: BN) {
   return web3.PublicKey.findProgramAddressSync(
-    [Buffer.from("pool"), organizer.toBuffer(), seed.toArrayLike(Buffer, "le", 8)],
+    [
+      Buffer.from("pool"),
+      organizer.toBuffer(),
+      seed.toArrayLike(Buffer, "le", 8),
+    ],
     PROGRAM_ID
   )[0];
 }
@@ -35,7 +44,10 @@ function deriveVaultPda(pool: web3.PublicKey) {
   )[0];
 }
 
-function deriveContributionPda(pool: web3.PublicKey, contributor: web3.PublicKey) {
+function deriveContributionPda(
+  pool: web3.PublicKey,
+  contributor: web3.PublicKey
+) {
   return web3.PublicKey.findProgramAddressSync(
     [Buffer.from("contribution"), pool.toBuffer(), contributor.toBuffer()],
     PROGRAM_ID
@@ -54,12 +66,13 @@ async function main() {
     const name = args[2] || "Demo Pool";
     const target = new BN(args[3] || "1000000000");
     const deadline = new BN(args[4] || Math.floor(Date.now() / 1000) + 3600);
+    const receiver = new web3.PublicKey(args[5] || wallet.publicKey.toBase58());
 
     const pool = derivePoolPda(wallet.publicKey, seed);
     const vault = deriveVaultPda(pool);
 
     const tx = await program.methods
-      .createPool(seed, name, target, deadline)
+      .createPool(seed, name, target, deadline, receiver)
       .accounts({
         organizer: wallet.publicKey,
         pool,
@@ -69,6 +82,7 @@ async function main() {
       .rpc();
 
     console.log("Pool created:", pool.toBase58());
+    console.log("Receiver:", receiver.toBase58());
     console.log("Tx:", tx);
   } else if (cmd === "contribute") {
     const poolPubkey = new web3.PublicKey(args[1]);
@@ -91,8 +105,8 @@ async function main() {
     console.log("Tx:", tx);
   } else if (cmd === "finalize") {
     const poolPubkey = new web3.PublicKey(args[1]);
-    const receiver = new web3.PublicKey(args[2] || wallet.publicKey.toBase58());
     const poolData = await program.account.poolAccount.fetch(poolPubkey);
+    const receiver = poolData.receiver;
     const vault = deriveVaultPda(poolPubkey);
 
     const tx = await program.methods
@@ -132,9 +146,11 @@ async function main() {
     console.log("Pool:", pool);
   } else {
     console.log("Usage:");
-    console.log("  npx ts-node app/cli.ts create <seed> <name> <target> <deadline>");
+    console.log(
+      "  npx ts-node app/cli.ts create <seed> <name> <target> <deadline> [receiver]"
+    );
     console.log("  npx ts-node app/cli.ts contribute <pool> <amount>");
-    console.log("  npx ts-node app/cli.ts finalize <pool> [receiver]");
+    console.log("  npx ts-node app/cli.ts finalize <pool>");
     console.log("  npx ts-node app/cli.ts refund <pool>");
     console.log("  npx ts-node app/cli.ts info <pool>");
   }

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Header } from './components/Header'
 import { Hero } from './components/Hero'
+import { Workflow } from './components/Workflow'
 import { PoolList } from './components/PoolList'
 import { PoolDetail } from './components/PoolDetail'
 import { PoolCreate } from './components/PoolCreate'
@@ -9,11 +10,13 @@ import { BackgroundDecor } from './components/BackgroundDecor'
 import { ToastProvider } from './components/ui/Toast'
 import { PublicKey } from '@solana/web3.js'
 import { useProgram } from './hooks/useProgram'
+import { publicKeyToString } from './lib/pools'
+import type { PoolView } from './types/pool'
 
 function App() {
   const { fetchAllPools } = useProgram()
   const [activeTab, setActiveTab] = useState('pools')
-  const [selectedPool, setSelectedPool] = useState<any | null>(null)
+  const [selectedPool, setSelectedPool] = useState<PoolView | null>(null)
   const [poolToLoad, setPoolToLoad] = useState<string | null>(null)
   const dashboardRef = useRef<HTMLDivElement>(null)
   const dashboardContentRef = useRef<HTMLDivElement>(null)
@@ -35,7 +38,7 @@ function App() {
       try {
         const pubkey = new PublicKey(poolToLoad)
         const pools = await fetchAllPools()
-        const found = pools.find((p: any) => p.address.toBase58() === pubkey.toBase58())
+        const found = pools.find((p) => publicKeyToString(p.address) === pubkey.toBase58())
         if (found) {
           setSelectedPool(found)
           setActiveTab('pools')
@@ -49,7 +52,7 @@ function App() {
     }
     
     loadPool()
-  }, [poolToLoad, selectedPool])
+  }, [fetchAllPools, poolToLoad, selectedPool])
 
   const scrollToElement = (element: HTMLElement | null, offset = 120) => {
     if (!element) return
@@ -91,11 +94,10 @@ function App() {
     }, 120)
   }
 
-  const handleSelectPool = (pool: any) => {
+  const handleSelectPool = (pool: PoolView) => {
     setSelectedPool(pool)
     setActiveTab('pools')
-    // Update URL
-    const addr = pool.address?.toBase58?.() || pool.address
+    const addr = publicKeyToString(pool.address)
     if (addr) {
       const url = new URL(window.location.href)
       url.searchParams.set('pool', addr)
@@ -105,17 +107,15 @@ function App() {
 
   const handleBack = () => {
     setSelectedPool(null)
-    // Remove pool param from URL
     const url = new URL(window.location.href)
     url.searchParams.delete('pool')
     window.history.pushState({}, '', url.toString())
   }
 
-  const handleCreated = (pool: any) => {
+  const handleCreated = (pool: PoolView) => {
     setSelectedPool(pool)
     setActiveTab('pools')
-    // Update URL
-    const addr = pool.address?.toBase58?.() || pool.address
+    const addr = publicKeyToString(pool.address)
     if (addr) {
       const url = new URL(window.location.href)
       url.searchParams.set('pool', addr)
@@ -130,6 +130,7 @@ function App() {
         <Header activeTab={activeTab} onTabChange={handleTabChange} />
         <main className="flex-1">
           <Hero onCreate={handleHeroCreate} onExplore={handleHeroExplore} onScroll={scrollToDashboard} />
+          <Workflow />
           <section ref={dashboardRef} className="mx-auto w-full max-w-[1200px] px-5 pb-24 pt-10 sm:px-6">
             <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
@@ -162,6 +163,7 @@ function App() {
                       <PoolDetail
                         pool={selectedPool}
                         onBack={handleBack}
+                        onUpdated={setSelectedPool}
                       />
                     ) : (
                       <PoolList onSelect={handleSelectPool} />

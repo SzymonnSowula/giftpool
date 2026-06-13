@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion'
+import { motion } from "framer-motion";
 import {
   ArrowDown,
   Gift,
@@ -9,50 +9,71 @@ import {
   Sparkles,
   Users,
   Zap,
-} from 'lucide-react'
-import heroAsset from '../assets/hero.png'
+} from "lucide-react";
+import heroAsset from "../assets/hero.png";
 
-const ease = [0.16, 1, 0.3, 1] as const
+const ease = [0.16, 1, 0.3, 1] as const;
 
 const container = {
   hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.09, delayChildren: 0.15 } },
-}
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.09, delayChildren: 0.15 },
+  },
+};
 
 const item = {
   hidden: { opacity: 0, y: 18 },
   show: { opacity: 1, y: 0, transition: { duration: 0.62, ease } },
-}
+};
 
 const categories = [
-  { icon: Gift, label: 'Group Gifts', desc: 'Birthdays, weddings, office gifts.' },
-  { icon: HeartHandshake, label: 'Community Causes', desc: 'Fund shared moments and local initiatives.' },
-  { icon: PartyPopper, label: 'Celebrations', desc: 'Collect fast without chasing transfers.' },
-]
+  {
+    icon: Gift,
+    label: "Group Gifts",
+    desc: "Birthdays, weddings, office gifts.",
+  },
+  {
+    icon: HeartHandshake,
+    label: "Community Causes",
+    desc: "Fund shared moments and local initiatives.",
+  },
+  {
+    icon: PartyPopper,
+    label: "Celebrations",
+    desc: "Collect fast without chasing transfers.",
+  },
+];
 
 const trustPoints = [
-  { icon: Shield, label: 'Escrowed', desc: 'Funds stay in the program vault.' },
-  { icon: Users, label: 'Transparent', desc: 'Everyone can inspect the pool.' },
-  { icon: Zap, label: 'Automatic', desc: 'Clear success and refund paths.' },
-  { icon: Lock, label: 'Trustless', desc: 'Rules are enforced by code.' },
-]
+  { icon: Shield, label: "Escrowed", desc: "Funds stay in the program vault." },
+  { icon: Users, label: "Transparent", desc: "Everyone can inspect the pool." },
+  { icon: Zap, label: "Automatic", desc: "Clear success and refund paths." },
+  { icon: Lock, label: "Trustless", desc: "Rules are enforced by code." },
+];
 
 const nftAvatars = [
   {
-    src: 'https://i.pinimg.com/736x/9b/bf/7b/9bbf7b7765d1c7f0d01c59bb4264aaf2.jpg',
-    alt: 'NFT collector avatar',
+    src: "https://i.pinimg.com/736x/9b/bf/7b/9bbf7b7765d1c7f0d01c59bb4264aaf2.jpg",
+    alt: "NFT collector avatar",
   },
   {
-    src: 'https://img.magnific.com/free-vector/hand-drawn-nft-style-ape-illustration_23-2149622021.jpg?semt=ais_hybrid&w=740&q=80',
-    alt: 'NFT ape avatar',
+    src: "https://img.magnific.com/free-vector/hand-drawn-nft-style-ape-illustration_23-2149622021.jpg?semt=ais_hybrid&w=740&q=80",
+    alt: "NFT ape avatar",
   },
   {
-    src: 'https://lh6.googleusercontent.com/55OdH3DU0kmmzjOOnfxO8TAsBR7xCRuFNBfZivPq0KWrd1gWo-7T12yKdnRWG_nKLuQOeMxOm95o2W0oTenW_0KuYBGOTuqJ_Afdzrtq2V8A7peV5ljeKCnadjfsnZbsLZ3Y-euH5mr2SfsvUA2AuvFsvAHtdCX_sXl5eVQxRfF2M7wRKzxe4BBenw',
-    alt: 'NFT profile avatar',
+    src: "https://lh6.googleusercontent.com/55OdH3DU0kmmzjOOnfxO8TAsBR7xCRuFNBfZivPq0KWrd1gWo-7T12yKdnRWG_nKLuQOeMxOm95o2W0oTenW_0KuYBGOTuqJ_Afdzrtq2V8A7peV5ljeKCnadjfsnZbsLZ3Y-euH5mr2SfsvUA2AuvFsvAHtdCX_sXl5eVQxRfF2M7wRKzxe4BBenw",
+    alt: "NFT profile avatar",
   },
-]
+];
 
-function NftAvatar({ avatar, index }: { avatar: (typeof nftAvatars)[number]; index: number }) {
+function NftAvatar({
+  avatar,
+  index,
+}: {
+  avatar: (typeof nftAvatars)[number];
+  index: number;
+}) {
   return (
     <span
       className="relative flex h-10 w-10 overflow-hidden rounded-xl border-2 border-[var(--bg)] bg-white/[0.08] shadow-[0_10px_28px_rgba(0,0,0,0.32)] ring-1 ring-white/20"
@@ -67,21 +88,29 @@ function NftAvatar({ avatar, index }: { avatar: (typeof nftAvatars)[number]; ind
       />
       <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/25 to-transparent" />
     </span>
-  )
+  );
 }
 
 export function Hero({
   onCreate,
   onExplore,
 }: {
-  onCreate: () => void
-  onExplore: () => void
-  onScroll?: () => void
+  onCreate: () => void;
+  onExplore: () => void;
+  onScroll?: () => void;
 }) {
   return (
-    <section className="relative mx-auto grid min-h-svh max-w-[1240px] grid-cols-1 items-center gap-12 px-5 pb-20 pt-32 sm:px-6 lg:grid-cols-[minmax(0,1.08fr)_minmax(380px,0.92fr)] lg:gap-14 lg:pt-36">
-      <motion.div variants={container} initial="hidden" animate="show" className="relative z-10">
-        <motion.div variants={item} className="mb-6 flex flex-wrap items-center gap-3">
+    <section className="relative mx-auto grid min-h-[88svh] max-w-[1240px] grid-cols-1 items-center gap-12 px-5 pb-12 pt-32 sm:px-6 lg:grid-cols-[minmax(0,1.08fr)_minmax(380px,0.92fr)] lg:gap-14 lg:pt-36">
+      <motion.div
+        variants={container}
+        initial="hidden"
+        animate="show"
+        className="relative z-10"
+      >
+        <motion.div
+          variants={item}
+          className="mb-6 flex flex-wrap items-center gap-3"
+        >
           <div className="flex items-center" aria-label="NFT collector avatars">
             {nftAvatars.map((avatar, index) => (
               <NftAvatar key={avatar.src} avatar={avatar} index={index} />
@@ -97,17 +126,22 @@ export function Hero({
           variants={item}
           className="max-w-[700px] text-[clamp(42px,5.8vw,78px)] font-black leading-[0.98] tracking-normal text-white"
         >
-          Make the group gift
-          <br />
-          <span className="display-serif gift-ribbon-text">feel effortless.</span>
+          Make the group{" "}
+          <span className="inline-block max-w-full">
+            gift{" "}
+            <span className="display-serif gift-ribbon-text">
+              feel effortless.
+            </span>
+          </span>
         </motion.h1>
 
         <motion.p
           variants={item}
           className="mt-6 max-w-[610px] text-[clamp(16px,1.7vw,20px)] leading-[1.65] text-[var(--text-secondary)]"
         >
-          Create a beautiful shared pool, invite friends, and let the smart contract hold funds until the goal is
-          reached. If the moment falls through, refunds stay automatic.
+          Create a beautiful shared pool, invite friends, and let the smart
+          contract hold funds until the goal is reached. If the moment falls
+          through, refunds stay automatic.
         </motion.p>
 
         <motion.div variants={item} className="mt-8 flex flex-wrap gap-3">
@@ -125,12 +159,22 @@ export function Hero({
           </button>
         </motion.div>
 
-        <motion.div variants={item} className="mt-10 grid max-w-[720px] grid-cols-1 gap-3 sm:grid-cols-3">
+        <motion.div
+          variants={item}
+          className="mt-10 hidden max-w-[720px] grid-cols-1 gap-3 sm:grid sm:grid-cols-3"
+        >
           {categories.map((cat) => (
-            <div key={cat.label} className="liquid-glass rounded-2xl p-5 transition-transform hover:-translate-y-0.5">
+            <div
+              key={cat.label}
+              className="liquid-glass rounded-2xl p-5 transition-transform hover:-translate-y-0.5"
+            >
               <cat.icon size={20} className="mb-3 text-[var(--gift)]" />
-              <div className="mb-1.5 text-sm font-bold text-white">{cat.label}</div>
-              <div className="text-xs leading-5 text-[var(--text-muted)]">{cat.desc}</div>
+              <div className="mb-1.5 text-sm font-bold text-white">
+                {cat.label}
+              </div>
+              <div className="text-xs leading-5 text-[var(--text-muted)]">
+                {cat.desc}
+              </div>
             </div>
           ))}
         </motion.div>
@@ -140,7 +184,7 @@ export function Hero({
         initial={{ opacity: 0, y: 28, scale: 0.96 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.8, delay: 0.25, ease }}
-        className="relative z-10 mx-auto flex w-full max-w-[500px] flex-col gap-4 lg:mx-0"
+        className="relative z-10 mx-auto hidden w-full max-w-[500px] flex-col gap-4 lg:mx-0 lg:flex"
       >
         <img
           src={heroAsset}
@@ -151,8 +195,12 @@ export function Hero({
         <div className="liquid-glass relative ml-auto w-full rounded-[34px] p-5 sm:p-6">
           <div className="mb-6 flex items-center justify-between gap-5">
             <div className="min-w-0">
-              <div className="mb-1 text-xs font-black uppercase text-[var(--text-muted)]">Live gift pool</div>
-              <div className="truncate text-2xl font-black text-white">Alice birthday weekend</div>
+              <div className="mb-1 text-xs font-black uppercase text-[var(--text-muted)]">
+                Live gift pool
+              </div>
+              <div className="truncate text-2xl font-black text-white">
+                Alice birthday weekend
+              </div>
             </div>
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--gift)] to-[var(--gold)] text-[var(--text-inverse)]">
               <Gift size={22} />
@@ -162,8 +210,12 @@ export function Hero({
           <div className="mb-5 rounded-[22px] border border-[var(--border)] bg-white/[0.08] p-5">
             <div className="mb-3 flex items-end justify-between gap-4">
               <div>
-                <div className="text-xs font-bold text-[var(--text-muted)]">Raised</div>
-                <div className="text-[clamp(32px,4vw,42px)] font-black leading-none text-white">3.750 SOL</div>
+                <div className="text-xs font-bold text-[var(--text-muted)]">
+                  Raised
+                </div>
+                <div className="text-[clamp(32px,4vw,42px)] font-black leading-none text-white">
+                  3.750 SOL
+                </div>
               </div>
               <div className="text-sm font-black text-[#c7b7ff]">75%</div>
             </div>
@@ -173,29 +225,58 @@ export function Hero({
           </div>
 
           <div className="grid gap-2.5">
-            {['Maya joined with 0.5 SOL', 'Kuba shared the pool', 'Smart contract vault active'].map((line, index) => (
+            {[
+              "Maya joined with 0.5 SOL",
+              "Kuba shared the pool",
+              "Smart contract vault active",
+            ].map((line, index) => (
               <div
                 key={line}
                 className={`flex items-center justify-between gap-3 rounded-2xl border border-[var(--border)] px-3.5 py-3 text-sm font-bold text-[var(--text-secondary)] ${
-                  index === 0 ? 'bg-[rgba(103,240,200,0.09)]' : 'bg-white/[0.055]'
+                  index === 0
+                    ? "bg-[rgba(103,240,200,0.09)]"
+                    : "bg-white/[0.055]"
                 }`}
               >
                 <span className="truncate">{line}</span>
-                <Zap size={14} className={index === 0 ? 'shrink-0 text-[var(--mint)]' : 'shrink-0 text-[var(--text-muted)]'} />
+                <Zap
+                  size={14}
+                  className={
+                    index === 0
+                      ? "shrink-0 text-[var(--mint)]"
+                      : "shrink-0 text-[var(--text-muted)]"
+                  }
+                />
               </div>
             ))}
           </div>
         </div>
 
         <div className="liquid-glass relative w-full rounded-3xl p-5 sm:max-w-[330px]">
-          <div className="mb-3 text-xs font-black uppercase text-[var(--text-muted)]">Why it works</div>
+          <div className="mb-3 text-xs font-black uppercase text-[var(--text-muted)]">
+            Why it works
+          </div>
           <div className="grid gap-3">
             {trustPoints.map((point) => (
-              <div key={point.label} className="grid grid-cols-[22px_1fr] items-start gap-2.5">
-                <point.icon size={17} className={point.label === 'Automatic' ? 'text-[var(--gold)]' : 'text-white'} />
+              <div
+                key={point.label}
+                className="grid grid-cols-[22px_1fr] items-start gap-2.5"
+              >
+                <point.icon
+                  size={17}
+                  className={
+                    point.label === "Automatic"
+                      ? "text-[var(--gold)]"
+                      : "text-white"
+                  }
+                />
                 <div>
-                  <div className="text-sm font-black text-white">{point.label}</div>
-                  <div className="text-xs leading-5 text-[var(--text-muted)]">{point.desc}</div>
+                  <div className="text-sm font-black text-white">
+                    {point.label}
+                  </div>
+                  <div className="text-xs leading-5 text-[var(--text-muted)]">
+                    {point.desc}
+                  </div>
                 </div>
               </div>
             ))}
@@ -212,5 +293,5 @@ export function Hero({
         <ArrowDown size={20} className="text-[var(--text-muted)]" />
       </motion.div>
     </section>
-  )
+  );
 }

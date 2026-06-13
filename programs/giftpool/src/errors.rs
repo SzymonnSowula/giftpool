@@ -26,4 +26,6 @@ pub enum GiftPoolError {
     AlreadyRefunded,
     #[msg("Refund not yet allowed")]
     RefundNotYetAllowed,
+    #[msg("Receiver does not match the receiver stored on the pool")]
+    InvalidReceiver,
 }

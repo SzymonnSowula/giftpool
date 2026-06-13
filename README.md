@@ -23,9 +23,9 @@ GiftPool replaces the usual "one person collects everything" group-gift flow wit
 
 | Role        | What they do                                   | What the program guarantees                        |
 | ----------- | ---------------------------------------------- | -------------------------------------------------- |
-| Organizer   | Creates a pool with target amount and deadline | Can only finalize once the target is met           |
+| Organizer   | Creates a pool with target amount, receiver, and deadline | Can only finalize once the target is met           |
 | Contributor | Sends SOL into the pool vault                  | Can claim their own refund if the pool fails       |
-| Receiver    | Receives the pooled SOL on finalize            | Receives only tracked contributions from the vault |
+| Receiver    | Is fixed when the pool is created              | Receives only tracked contributions from the vault |
 
 The result is simple: no spreadsheet, no awkward chasing, no trusted middleman.
 
@@ -49,7 +49,7 @@ GiftPool uses the standard Solana escrow shape: deterministic PDAs, a vault with
 
 | Account               | PDA seeds                             | Purpose                                                          |
 | --------------------- | ------------------------------------- | ---------------------------------------------------------------- |
-| `PoolAccount`         | `["pool", organizer, seed]`           | Pool metadata, target, deadline, total contributed, status, bump |
+| `PoolAccount`         | `["pool", organizer, seed]`           | Pool metadata, receiver, target, deadline, total contributed, status, bump |
 | `ContributionAccount` | `["contribution", pool, contributor]` | Per-contributor total amount and refund state                    |
 | `Vault`               | `["vault", pool]`                     | System account PDA that holds pooled SOL                         |
 
@@ -74,10 +74,10 @@ Closed
 
 | Instruction                                        | Who signs   | Main checks                                   | Result                                                     |
 | -------------------------------------------------- | ----------- | --------------------------------------------- | ---------------------------------------------------------- |
-| `create_pool(seed, name, target_amount, deadline)` | Organizer   | name length, target > 0, future deadline      | Creates pool PDA and derives vault PDA                     |
+| `create_pool(seed, name, target_amount, deadline, receiver)` | Organizer   | name length, target > 0, future deadline      | Creates pool PDA, stores receiver, and derives vault PDA   |
 | `contribute(amount)`                               | Contributor | pool open, deadline not passed, amount > 0    | Transfers SOL to vault and updates contribution            |
-| `finalize_pool()`                                  | Organizer   | organizer signer, pool open, target met       | Transfers tracked SOL to receiver and closes pool          |
-| `refund_contribution()`                            | Contributor | deadline passed, target not met, not refunded | Sends contributor's amount back and closes pool when empty |
+| `finalize_pool()`                                  | Organizer   | organizer signer, stored receiver, pool open, target met | Transfers tracked SOL to receiver and closes pool          |
+| `refund_contribution()`                            | Contributor | deadline passed, target not met, not refunded | Sends contributor's amount back, closes contribution account, and closes pool when empty |
 
 ## Why This Fits Solana
 
@@ -88,6 +88,7 @@ Closed
 | `invoke_signed`    | The program signs vault payouts without any private key                       |
 | Anchor constraints | Seed, signer, status, and authorization checks sit next to account validation |
 | Checked math       | Contribution totals use checked add/sub operations                            |
+| Anchor events      | Create, contribute, finalize, and refund emit indexer-friendly events         |
 
 ## Devnet
 
@@ -167,15 +168,18 @@ Covered:
 - reject refund before deadline
 - reject refund after deadline when target was met
 - close failed pool after all tracked refunds are claimed
+- reject finalize to an unstored receiver
+- reject duplicate pool seeds
+- reject invalid targets, past deadlines, zero contributions, late contributions, and unauthorized finalization
 
 ## CLI
 
 The devnet CLI lives in `app/cli.ts` and reads `~/.config/solana/id.json`.
 
 ```bash
-npx ts-node --transpile-only app/cli.ts create <seed> <name> <target_lamports> <deadline_unix>
+npx ts-node --transpile-only app/cli.ts create <seed> <name> <target_lamports> <deadline_unix> [receiver_pubkey]
 npx ts-node --transpile-only app/cli.ts contribute <pool_pubkey> <amount_lamports>
-npx ts-node --transpile-only app/cli.ts finalize <pool_pubkey> [receiver_pubkey]
+npx ts-node --transpile-only app/cli.ts finalize <pool_pubkey>
 npx ts-node --transpile-only app/cli.ts refund <pool_pubkey>
 npx ts-node --transpile-only app/cli.ts info <pool_pubkey>
 ```
@@ -201,18 +205,16 @@ Anchor.toml                      Anchor workspace and test script
 | ------------- | ------------------------------------------------ | --------------------------------------------------- |
 | Asset type    | SOL only                                         | Add SPL token support if needed                     |
 | Privacy       | Pool names, amounts, and contributors are public | Keep names generic or add off-chain metadata        |
-| Receiver      | Organizer supplies receiver during finalize      | Enforce stored receiver or set receiver at creation |
+| Receiver      | Receiver is fixed at pool creation               | Add optional receiver change flow with explicit contributor policy if needed |
 | Vault balance | Program transfers tracked `total_contributed`    | Add policy for accidental direct SOL transfers      |
-| Rent          | Contribution accounts stay open after refund     | Close refunded accounts and return rent             |
-| Indexing      | Clients fetch accounts and read logs             | Emit Anchor events for cleaner indexing             |
+| Rent          | Contribution accounts close after refund         | Consider closing pool accounts when lifecycle ends  |
+| Indexing      | Anchor events emitted for lifecycle actions      | Add an external indexer for richer analytics        |
 
 ## Hardening Backlog
 
-- Enforce the final receiver model.
-- Emit Anchor events for create, contribute, finalize, and refund.
-- Close contribution accounts after successful refund.
-- Add tests for unauthorized finalize, zero amounts, invalid deadlines, duplicate seeds, and contribution after deadline.
 - Decide how the UI should represent pools that are funded but not finalized after deadline.
+- Add SPL token support if the demo needs non-SOL gifts.
+- Add an accidental-direct-transfer policy for extra lamports sent to vault PDAs.
 
 ## License
 

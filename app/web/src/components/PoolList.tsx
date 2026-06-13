@@ -1,44 +1,71 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Search, RefreshCw, Inbox } from 'lucide-react'
 import { useProgram } from '../hooks/useProgram'
 import { PoolCard } from './PoolCard'
 import { Skeleton } from './ui/Skeleton'
 import { Input } from './ui/Input'
+import { filterAndSortPools, getPoolPhase, publicKeyToString } from '../lib/pools'
+import type { PoolFilterStatus, PoolView } from '../types/pool'
 
-export function PoolList({ onSelect }: { onSelect: (pool: any) => void }) {
+const statusFilters: { id: PoolFilterStatus; label: string }[] = [
+  { id: 'all', label: 'All' },
+  { id: 'open', label: 'Open' },
+  { id: 'funded', label: 'Funded' },
+  { id: 'expired', label: 'Refundable' },
+  { id: 'refunding', label: 'Refunding' },
+  { id: 'closed', label: 'Closed' },
+]
+
+export function PoolList({ onSelect }: { onSelect: (pool: PoolView) => void }) {
   const { fetchAllPools } = useProgram()
-  const [pools, setPools] = useState<any[]>([])
+  const [pools, setPools] = useState<PoolView[]>([])
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [query, setQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<PoolFilterStatus>('all')
   const [error, setError] = useState('')
 
-  const fetchPools = async () => {
-    setLoading(true)
+  const fetchPools = useCallback(async (initial = false) => {
+    if (initial) setLoading(true)
+    else setRefreshing(true)
     setError('')
     try {
       const all = await fetchAllPools()
       setPools(all)
-    } catch (e) {
-      console.error('Failed to fetch pools:', e)
+    } catch (error) {
+      console.error('Failed to fetch pools:', error)
       setError('Failed to load pools')
     } finally {
-      setLoading(false)
+      if (initial) setLoading(false)
+      else setRefreshing(false)
     }
-  }
+  }, [fetchAllPools])
 
   useEffect(() => {
-    fetchPools()
-    const interval = setInterval(fetchPools, 15000)
+    fetchPools(true)
+    const interval = setInterval(() => fetchPools(false), 15000)
     return () => clearInterval(interval)
-  }, [])
+  }, [fetchPools])
 
-  const filtered = pools.filter((p) => {
-    const q = query.toLowerCase()
-    const name = (p.name || '').toLowerCase()
-    const addr = (p.address?.toBase58?.() || p.address || '').toLowerCase()
-    return name.includes(q) || addr.includes(q)
-  })
+  const counts = useMemo(() => {
+    return pools.reduce<Record<PoolFilterStatus, number>>(
+      (acc, pool) => {
+        const phase = getPoolPhase(pool).id
+        acc.all += 1
+        acc[phase] += 1
+        return acc
+      },
+      { all: 0, open: 0, funded: 0, expired: 0, refunding: 0, closed: 0, unknown: 0 },
+    )
+  }, [pools])
+
+  const filtered = useMemo(() => {
+    return filterAndSortPools(pools, {
+      query,
+      status: statusFilter,
+    })
+  }, [pools, query, statusFilter])
 
   return (
     <div>
@@ -53,22 +80,57 @@ export function PoolList({ onSelect }: { onSelect: (pool: any) => void }) {
           />
         </div>
         <button
-          onClick={fetchPools}
-          disabled={loading}
+          onClick={() => fetchPools(false)}
+          disabled={loading || refreshing}
           style={{
             padding: 10,
             borderRadius: 'var(--r-sm)',
             background: 'var(--surface)',
             border: '1px solid var(--border)',
             color: 'var(--text)',
-            cursor: loading ? 'wait' : 'pointer',
+            cursor: loading || refreshing ? 'wait' : 'pointer',
             transition: 'transform 0.15s',
           }}
-          onMouseDown={(e) => !loading && (e.currentTarget.style.transform = 'scale(0.96)')}
+          title="Refresh pools"
+          onMouseDown={(e) => !loading && !refreshing && (e.currentTarget.style.transform = 'scale(0.96)')}
           onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
         >
-          <RefreshCw size={16} className={loading ? 'spin' : ''} />
+          <RefreshCw size={16} className={loading || refreshing ? 'spin' : ''} />
         </button>
+      </div>
+
+      <div
+        style={{
+          display: 'flex',
+          gap: 8,
+          marginBottom: 24,
+          overflowX: 'auto',
+          paddingBottom: 2,
+        }}
+      >
+        {statusFilters.map((filter) => {
+          const active = statusFilter === filter.id
+          return (
+            <button
+              key={filter.id}
+              type="button"
+              onClick={() => setStatusFilter(filter.id)}
+              style={{
+                flex: '0 0 auto',
+                borderRadius: 'var(--r-full)',
+                border: `1px solid ${active ? 'var(--border-strong)' : 'var(--border)'}`,
+                background: active ? 'rgba(255, 255, 255, 0.13)' : 'rgba(255, 255, 255, 0.05)',
+                color: active ? 'var(--text)' : 'var(--text-muted)',
+                padding: '8px 12px',
+                fontSize: 'var(--text-xs)',
+                fontWeight: 800,
+                transition: 'background 0.2s, color 0.2s, border-color 0.2s',
+              }}
+            >
+              {filter.label} {counts[filter.id] > 0 ? counts[filter.id] : ''}
+            </button>
+          )
+        })}
       </div>
 
       <AnimatePresence mode="wait">
@@ -127,7 +189,7 @@ export function PoolList({ onSelect }: { onSelect: (pool: any) => void }) {
             style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
           >
             {filtered.map((pool, i) => (
-              <PoolCard key={pool.address.toBase58()} pool={pool} onClick={() => onSelect(pool)} index={i} />
+              <PoolCard key={publicKeyToString(pool.address)} pool={pool} onClick={() => onSelect(pool)} index={i} />
             ))}
           </motion.div>
         )}

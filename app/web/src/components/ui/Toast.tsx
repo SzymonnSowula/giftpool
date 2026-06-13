@@ -6,6 +6,8 @@ interface Toast {
   type: 'success' | 'error' | 'info' | 'warning'
   message: string
   description?: string
+  actionLabel?: string
+  actionHref?: string
 }
 
 const ToastContext = createContext<{
@@ -83,6 +85,23 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>{t.message}</div>
                 {t.description && (
                   <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{t.description}</div>
+                )}
+                {t.actionHref && (
+                  <a
+                    href={t.actionHref}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{
+                      display: 'inline-flex',
+                      marginTop: 8,
+                      color: c.icon,
+                      fontSize: 12,
+                      fontWeight: 700,
+                      textDecoration: 'none',
+                    }}
+                  >
+                    {t.actionLabel || 'View transaction'}
+                  </a>
                 )}
               </div>
               <button

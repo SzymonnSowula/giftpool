@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Clock, Target, Users, Wallet, CheckCircle, AlertTriangle, Share2 } from 'lucide-react'
-import { useProgram, deriveVaultPda, deriveContributionPda, solToLamports, lamportsToSol } from '../hooks/useProgram'
+import { ArrowLeft, Clock, Target, Users, Wallet, CheckCircle, AlertTriangle, Share2, ExternalLink, Info } from 'lucide-react'
+import { useProgram, deriveVaultPda, deriveContributionPda, solToLamports, lamportsToSol, explorerTxUrl } from '../hooks/useProgram'
 import { useToast } from './ui/Toast'
 import { Button } from './ui/Button'
 import { Card } from './ui/Card'
@@ -9,34 +9,52 @@ import { Badge } from './ui/Badge'
 import { Progress } from './ui/Progress'
 import { Stat } from './ui/Stat'
 import { PublicKey } from '@solana/web3.js'
+import {
+  getPoolActionState,
+  getContributionGuidance,
+  getPoolPhase,
+  numericValueToNumber,
+  publicKeyToString,
+} from '../lib/pools'
+import type { PoolView } from '../types/pool'
 
 interface PoolDetailProps {
-  pool: any
+  pool: PoolView
   onBack: () => void
+  onUpdated: (pool: PoolView) => void
 }
 
-export function PoolDetail({ pool, onBack }: PoolDetailProps) {
-  const { program, wallet } = useProgram()
+export function PoolDetail({ pool, onBack, onUpdated }: PoolDetailProps) {
+  const { program, wallet, fetchPool } = useProgram()
   const { toast } = useToast()
   const [txLoading, setTxLoading] = useState<string | null>(null)
 
-  const status = pool.status ? Object.keys(pool.status)[0] : 'unknown'
-  const now = Math.floor(Date.now() / 1000)
-  const isDeadlinePassed = pool.deadline?.toNumber() < now
-  const isTargetMet = pool.totalContributed?.gte(pool.targetAmount)
-  const isOrganizer = wallet && pool.organizer?.toBase58?.() === wallet.publicKey?.toBase58()
-  const progress = pool.targetAmount?.toNumber() > 0
-    ? (pool.totalContributed?.toNumber() / pool.targetAmount?.toNumber()) * 100
-    : 0
+  const phase = getPoolPhase(pool)
+  const actions = getPoolActionState(pool, wallet?.publicKey)
+  const poolAddress = publicKeyToString(pool.address)
+  const poolPublicKey = new PublicKey(poolAddress)
+  const target = numericValueToNumber(pool.targetAmount)
+  const total = numericValueToNumber(pool.totalContributed)
+  const progress = target > 0 ? (total / target) * 100 : 0
+  const { isOrganizer, canContribute, canFinalize, canRefund } = actions
+  const contributionGuidance = getContributionGuidance()
+  const deadlineLabel = phase.deadlinePassed
+    ? phase.label
+    : new Date(numericValueToNumber(pool.deadline) * 1000).toLocaleString('pl-PL', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
 
-  const statusMap: Record<string, 'success' | 'warning' | 'error' | 'info' | 'neutral'> = {
-    open: 'info',
-    refunding: 'warning',
-    closed: 'neutral',
+  const refreshPool = async () => {
+    const updated = await fetchPool(poolPublicKey)
+    if (updated) onUpdated(updated)
   }
 
   const handleShare = async () => {
-    const addr = pool.address?.toBase58?.() || pool.address
+    const addr = poolAddress
     if (!addr) return
     
     const url = `${window.location.origin}?pool=${addr}`
@@ -44,7 +62,7 @@ export function PoolDetail({ pool, onBack }: PoolDetailProps) {
     try {
       await navigator.clipboard.writeText(url)
       toast({ type: 'success', message: 'Link copied to clipboard!' })
-    } catch (e) {
+    } catch {
       // Fallback for older browsers
       const textArea = document.createElement('textarea')
       textArea.value = url
@@ -63,16 +81,21 @@ export function PoolDetail({ pool, onBack }: PoolDetailProps) {
     }
     setTxLoading('contribute')
     try {
-      const poolPk = pool.address
-      const vault = deriveVaultPda(poolPk)
-      const contribution = deriveContributionPda(poolPk, wallet.publicKey)
-      await program.methods
+      const vault = deriveVaultPda(poolPublicKey)
+      const contribution = deriveContributionPda(poolPublicKey, wallet.publicKey)
+      const signature = await program.methods
         .contribute(solToLamports(amountSol))
-        .accounts({ contributor: wallet.publicKey, pool: poolPk, vault, contribution, systemProgram: PublicKey.default })
+        .accounts({ contributor: wallet.publicKey, pool: poolPublicKey, vault, contribution, systemProgram: PublicKey.default })
         .rpc()
-      toast({ type: 'success', message: `Contributed ${amountSol} SOL` })
-    } catch (e: any) {
-      toast({ type: 'error', message: 'Contribution failed', description: e?.message?.slice(0, 80) })
+      await refreshPool()
+      toast({
+        type: 'success',
+        message: `Contributed ${amountSol} SOL`,
+        actionLabel: 'View on Explorer',
+        actionHref: explorerTxUrl(signature),
+      })
+    } catch (error) {
+      toast({ type: 'error', message: 'Contribution failed', description: error instanceof Error ? error.message.slice(0, 80) : undefined })
     } finally {
       setTxLoading(null)
     }
@@ -82,16 +105,22 @@ export function PoolDetail({ pool, onBack }: PoolDetailProps) {
     if (!program || !wallet) return
     setTxLoading('finalize')
     try {
-      const poolPk = pool.address
-      const vault = deriveVaultPda(poolPk)
-      const receiver = pool.receiver || wallet.publicKey
-      await program.methods
+      const vault = deriveVaultPda(poolPublicKey)
+      const receiver = new PublicKey(publicKeyToString(pool.receiver || wallet.publicKey))
+      const signature = await program.methods
         .finalizePool()
-        .accounts({ organizer: wallet.publicKey, pool: poolPk, vault, receiver, systemProgram: PublicKey.default })
+        .accounts({ organizer: wallet.publicKey, pool: poolPublicKey, vault, receiver, systemProgram: PublicKey.default })
         .rpc()
-      toast({ type: 'success', message: 'Pool finalized', description: 'Funds released to receiver' })
-    } catch (e: any) {
-      toast({ type: 'error', message: 'Finalize failed', description: e?.message?.slice(0, 80) })
+      await refreshPool()
+      toast({
+        type: 'success',
+        message: 'Pool finalized',
+        description: 'Funds released to receiver',
+        actionLabel: 'View on Explorer',
+        actionHref: explorerTxUrl(signature),
+      })
+    } catch (error) {
+      toast({ type: 'error', message: 'Finalize failed', description: error instanceof Error ? error.message.slice(0, 80) : undefined })
     } finally {
       setTxLoading(null)
     }
@@ -101,16 +130,21 @@ export function PoolDetail({ pool, onBack }: PoolDetailProps) {
     if (!program || !wallet) return
     setTxLoading('refund')
     try {
-      const poolPk = pool.address
-      const vault = deriveVaultPda(poolPk)
-      const contribution = deriveContributionPda(poolPk, wallet.publicKey)
-      await program.methods
+      const vault = deriveVaultPda(poolPublicKey)
+      const contribution = deriveContributionPda(poolPublicKey, wallet.publicKey)
+      const signature = await program.methods
         .refundContribution()
-        .accounts({ contributor: wallet.publicKey, pool: poolPk, vault, contribution, systemProgram: PublicKey.default })
+        .accounts({ contributor: wallet.publicKey, pool: poolPublicKey, vault, contribution, systemProgram: PublicKey.default })
         .rpc()
-      toast({ type: 'success', message: 'Refund claimed' })
-    } catch (e: any) {
-      toast({ type: 'error', message: 'Refund failed', description: e?.message?.slice(0, 80) })
+      await refreshPool()
+      toast({
+        type: 'success',
+        message: 'Refund claimed',
+        actionLabel: 'View on Explorer',
+        actionHref: explorerTxUrl(signature),
+      })
+    } catch (error) {
+      toast({ type: 'error', message: 'Refund failed', description: error instanceof Error ? error.message.slice(0, 80) : undefined })
     } finally {
       setTxLoading(null)
     }
@@ -181,48 +215,52 @@ export function PoolDetail({ pool, onBack }: PoolDetailProps) {
                 <Share2 size={12} />
                 Share
               </button>
-              <Badge type={statusMap[status] || 'neutral'} size="md">
-                {status}
+              <Badge type={phase.badgeType} size="md">
+                {phase.label}
               </Badge>
             </div>
           </div>
           <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', wordBreak: 'break-all' }}>
-            {pool.address?.toBase58?.() || pool.address}
+            {poolAddress}
           </div>
+          <p style={{ marginTop: 10, color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>{phase.description}</p>
+          <a
+            href={`https://explorer.solana.com/address/${poolAddress}?cluster=devnet`}
+            target="_blank"
+            rel="noreferrer"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 10, color: 'var(--accent)', fontSize: 'var(--text-xs)', fontWeight: 700, textDecoration: 'none' }}
+          >
+            View pool account <ExternalLink size={12} />
+          </a>
         </div>
 
         {/* Stats */}
         <div style={{ padding: 'var(--space-6)', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 'var(--space-5)', borderBottom: '1px solid var(--border)' }}>
           <Stat label="Target" value={lamportsToSol(pool.targetAmount)} suffix="SOL" icon={<Target size={14} />} delay={0} />
-          <Stat label="Raised" value={lamportsToSol(pool.totalContributed)} suffix="SOL" color={isTargetMet ? 'var(--success)' : undefined} icon={<Users size={14} />} delay={1} />
-          <Stat label="Deadline" value={isDeadlinePassed ? 'Expired' : (() => {
-              const deadlineNum = pool.deadline?.toNumber?.() ?? Number(pool.deadline) ?? 0
-              return new Date(deadlineNum * 1000).toLocaleString('pl-PL', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-              })
-            })()} icon={<Clock size={14} />} delay={2} />
-          <Stat label="Progress" value={Math.round(Math.min(100, progress))} suffix="%" color={isTargetMet ? 'var(--success)' : undefined} icon={<Wallet size={14} />} delay={3} />
+          <Stat label="Raised" value={lamportsToSol(pool.totalContributed)} suffix="SOL" color={phase.targetMet ? 'var(--success)' : undefined} icon={<Users size={14} />} delay={1} />
+          <Stat label="Deadline" value={deadlineLabel} icon={<Clock size={14} />} delay={2} />
+          <Stat label="Progress" value={Math.round(Math.min(100, progress))} suffix="%" color={phase.targetMet ? 'var(--success)' : undefined} icon={<Wallet size={14} />} delay={3} />
         </div>
 
         {/* Progress */}
         <div style={{ padding: '0 var(--space-6) var(--space-6)', borderBottom: '1px solid var(--border)' }}>
           <div style={{ marginTop: 8 }}>
-            <Progress value={pool.totalContributed?.toNumber()} max={pool.targetAmount?.toNumber()} color={isTargetMet ? 'var(--success)' : 'var(--accent)'} />
+            <Progress value={total} max={target} color={phase.targetMet ? 'var(--success)' : 'var(--accent)'} />
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10, fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
             <span>{Math.round(Math.min(100, progress))}% complete</span>
-            <span>{lamportsToSol(Math.max(0, pool.targetAmount?.toNumber() - pool.totalContributed?.toNumber()))} SOL left</span>
+            <span>{lamportsToSol(Math.max(0, target - total))} SOL left</span>
+          </div>
+          <div style={{ marginTop: 14, padding: '12px', borderRadius: 'var(--r-sm)', background: 'var(--bg)', border: '1px solid var(--border)', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
+            <div style={{ marginBottom: 4, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Receiver</div>
+            <div style={{ fontFamily: 'var(--font-mono)', overflowWrap: 'anywhere' }}>{publicKeyToString(pool.receiver)}</div>
           </div>
         </div>
 
         {/* Actions */}
         <div style={{ padding: 'var(--space-6)', display: 'flex', flexDirection: 'column', gap: 12 }}>
           <AnimatePresence mode="wait">
-            {status === 'open' && (
+            {phase.status === 'open' && (
               <motion.div
                 key="open-actions"
                 initial={{ opacity: 0, height: 0 }}
@@ -231,9 +269,40 @@ export function PoolDetail({ pool, onBack }: PoolDetailProps) {
                 transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] as const }}
                 style={{ overflow: 'hidden' }}
               >
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '20px 1fr',
+                    gap: 10,
+                    marginBottom: 16,
+                    padding: '14px',
+                    borderRadius: 'var(--r-md)',
+                    border: '1px solid var(--info-border)',
+                    background: 'var(--info-bg)',
+                    color: 'var(--text-secondary)',
+                  }}
+                >
+                  <Info size={18} style={{ color: 'var(--info)', marginTop: 2 }} />
+                  <div>
+                    <div style={{ marginBottom: 5, color: 'var(--text)', fontSize: 'var(--text-sm)', fontWeight: 900 }}>
+                      {contributionGuidance.title}
+                    </div>
+                    <div style={{ fontSize: 'var(--text-sm)', lineHeight: 1.55 }}>
+                      {contributionGuidance.body}
+                    </div>
+                    <div style={{ marginTop: 8, color: 'var(--text-muted)', fontSize: 'var(--text-xs)', lineHeight: 1.5 }}>
+                      {contributionGuidance.note}
+                    </div>
+                  </div>
+                </div>
                 <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>
                   Contribute
                 </div>
+                {!canContribute && (
+                  <div style={{ marginBottom: 12, color: 'var(--warning)', fontSize: 'var(--text-sm)' }}>
+                    Deadline passed. New contributions are closed.
+                  </div>
+                )}
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   {[0.1, 0.5, 1, 2].map((amt) => (
                     <Button
@@ -242,14 +311,14 @@ export function PoolDetail({ pool, onBack }: PoolDetailProps) {
                       size="md"
                       onClick={() => handleContribute(amt)}
                       loading={txLoading === 'contribute'}
-                      disabled={txLoading === 'contribute'}
+                      disabled={txLoading === 'contribute' || !canContribute}
                     >
                       + {amt} SOL
                     </Button>
                   ))}
                 </div>
 
-                {isOrganizer && isTargetMet && (
+                {canFinalize && (
                   <div style={{ marginTop: 16 }}>
                     <Button
                       variant="success"
@@ -265,16 +334,35 @@ export function PoolDetail({ pool, onBack }: PoolDetailProps) {
                   </div>
                 )}
 
-                {isDeadlinePassed && !isTargetMet && (
-                  <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 8, padding: '12px', borderRadius: 'var(--r-sm)', background: 'var(--warning-bg)', border: '1px solid var(--warning-border)', color: 'var(--warning)', fontSize: 'var(--text-sm)' }}>
-                    <AlertTriangle size={16} />
-                    Deadline passed. Target not met. Refunds available.
+                {phase.targetMet && !isOrganizer && (
+                  <div style={{ marginTop: 16, color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>
+                    Target met. Waiting for the organizer to finalize.
+                  </div>
+                )}
+
+                {canRefund && (
+                  <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px', borderRadius: 'var(--r-sm)', background: 'var(--warning-bg)', border: '1px solid var(--warning-border)', color: 'var(--warning)', fontSize: 'var(--text-sm)' }}>
+                      <AlertTriangle size={16} />
+                      Deadline passed. Target not met. Contributors can claim refunds.
+                    </div>
+                    <Button
+                      variant="warning"
+                      size="lg"
+                      onClick={handleRefund}
+                      loading={txLoading === 'refund'}
+                      disabled={txLoading === 'refund'}
+                      fullWidth
+                      icon={<AlertTriangle size={16} />}
+                    >
+                      Claim Refund
+                    </Button>
                   </div>
                 )}
               </motion.div>
             )}
 
-            {status === 'refunding' && (
+            {phase.id === 'refunding' && (
               <motion.div
                 key="refund-action"
                 initial={{ opacity: 0, height: 0 }}
@@ -297,7 +385,7 @@ export function PoolDetail({ pool, onBack }: PoolDetailProps) {
               </motion.div>
             )}
 
-            {status === 'closed' && (
+            {phase.id === 'closed' && (
               <motion.div
                 key="closed"
                 initial={{ opacity: 0 }}

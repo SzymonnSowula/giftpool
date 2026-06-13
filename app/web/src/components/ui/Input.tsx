@@ -1,4 +1,4 @@
-import { forwardRef } from 'react'
+import { forwardRef, useId } from 'react'
 import type { InputHTMLAttributes } from 'react'
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
@@ -9,11 +9,17 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, icon, fullWidth, style, ...props }, ref) => {
+  ({ label, error, icon, fullWidth, style, id, ...props }, ref) => {
+    const generatedId = useId()
+    const inputId = id || generatedId
+    const errorId = `${inputId}-error`
+    const describedBy = props['aria-describedby']
+
     return (
       <div style={{ width: fullWidth ? '100%' : undefined }}>
         {label && (
           <label
+            htmlFor={inputId}
             style={{
               display: 'block',
               fontSize: 'var(--text-xs)',
@@ -45,6 +51,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           <input
             ref={ref}
             {...props}
+            id={inputId}
+            aria-describedby={error ? errorId : describedBy}
+            aria-invalid={error ? true : props['aria-invalid']}
             style={{
               flex: 1,
               background: 'none',
@@ -60,7 +69,12 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           />
         </div>
         {error && (
-          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--error)', marginTop: 6 }}>{error}</div>
+          <div
+            id={errorId}
+            style={{ fontSize: 'var(--text-xs)', color: 'var(--error)', marginTop: 6 }}
+          >
+            {error}
+          </div>
         )}
       </div>
     )

@@ -9,6 +9,7 @@ describe("giftpool", () => {
   const program = anchor.workspace.giftpool as Program<Giftpool>;
   const provider = anchor.getProvider();
   const wallet = provider.wallet as anchor.Wallet;
+  const giftReceiver = anchor.web3.Keypair.generate();
 
   const seed = new BN(1);
   const targetAmount = new BN(1_000_000_000); // 1 SOL
@@ -57,7 +58,13 @@ describe("giftpool", () => {
 
   it("Creates a pool", async () => {
     const tx = await program.methods
-      .createPool(seed, "Birthday Gift", targetAmount, deadline)
+      .createPool(
+        seed,
+        "Birthday Gift",
+        targetAmount,
+        deadline,
+        giftReceiver.publicKey
+      )
       .accounts({
         organizer: wallet.publicKey,
         pool: poolPda,
@@ -71,6 +78,9 @@ describe("giftpool", () => {
     const pool = await program.account.poolAccount.fetch(poolPda);
     expect(pool.name).to.equal("Birthday Gift");
     expect(pool.targetAmount.toNumber()).to.equal(targetAmount.toNumber());
+    expect(pool.receiver.toBase58()).to.equal(
+      giftReceiver.publicKey.toBase58()
+    );
     expect(pool.status.open).to.not.be.undefined;
   });
 
@@ -117,14 +127,13 @@ describe("giftpool", () => {
   });
 
   it("Finalizes the pool", async () => {
-    const receiver = anchor.web3.Keypair.generate();
     const tx = await program.methods
       .finalizePool()
       .accounts({
         organizer: wallet.publicKey,
         pool: poolPda,
         vault: vaultPda,
-        receiver: receiver.publicKey,
+        receiver: giftReceiver.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
       })
       .rpc();
@@ -135,7 +144,7 @@ describe("giftpool", () => {
     expect(pool.status.closed).to.not.be.undefined;
 
     const receiverBalance = await provider.connection.getBalance(
-      receiver.publicKey
+      giftReceiver.publicKey
     );
     expect(receiverBalance).to.equal(1_100_000_000);
   });
@@ -169,7 +178,13 @@ describe("giftpool", () => {
     const nearDeadline = new BN(Math.floor(Date.now() / 1000) + 2); // 2 seconds from now
 
     await program.methods
-      .createPool(refundSeed, "Failed Gift", targetAmount, nearDeadline)
+      .createPool(
+        refundSeed,
+        "Failed Gift",
+        targetAmount,
+        nearDeadline,
+        wallet.publicKey
+      )
       .accounts({
         organizer: wallet.publicKey,
         pool: refundPoolPda,
@@ -220,10 +235,16 @@ describe("giftpool", () => {
 
     console.log("Refund tx:", tx);
 
-    const contribution = await program.account.contributionAccount.fetch(
-      refundContributionPda
-    );
-    expect(contribution.refunded).to.be.true;
+    let closedContributionError: unknown;
+    try {
+      await program.account.contributionAccount.fetch(refundContributionPda);
+    } catch (error) {
+      closedContributionError = error;
+    }
+    expect(
+      closedContributionError,
+      "Expected refunded contribution account to be closed"
+    ).to.not.be.undefined;
 
     const balanceAfter = await provider.connection.getBalance(
       anotherContributor.publicKey
@@ -264,7 +285,8 @@ describe("giftpool", () => {
         earlyRefundSeed,
         "Early Refund Guard",
         targetAmount,
-        new BN(Math.floor(Date.now() / 1000) + 3600)
+        new BN(Math.floor(Date.now() / 1000) + 3600),
+        wallet.publicKey
       )
       .accounts({
         organizer: wallet.publicKey,
@@ -341,7 +363,8 @@ describe("giftpool", () => {
         successfulRefundSeed,
         "Successful Refund Guard",
         new BN(100_000_000),
-        new BN(Math.floor(Date.now() / 1000) + 2)
+        new BN(Math.floor(Date.now() / 1000) + 2),
+        wallet.publicKey
       )
       .accounts({
         organizer: wallet.publicKey,
@@ -388,6 +411,390 @@ describe("giftpool", () => {
     ).to.not.be.undefined;
     expect((refundError as anchor.AnchorError).error.errorCode.code).to.equal(
       "RefundNotYetAllowed"
+    );
+  });
+
+  it("Rejects finalize to a receiver that is not stored on the pool", async () => {
+    const receiverGuardSeed = new BN(5);
+    const receiverGuardPoolPda = anchor.web3.PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("pool"),
+        wallet.publicKey.toBuffer(),
+        receiverGuardSeed.toArrayLike(Buffer, "le", 8),
+      ],
+      program.programId
+    )[0];
+    const receiverGuardVaultPda = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("vault"), receiverGuardPoolPda.toBuffer()],
+      program.programId
+    )[0];
+    const receiverGuardContributionPda =
+      anchor.web3.PublicKey.findProgramAddressSync(
+        [
+          Buffer.from("contribution"),
+          receiverGuardPoolPda.toBuffer(),
+          anotherContributor.publicKey.toBuffer(),
+        ],
+        program.programId
+      )[0];
+
+    await program.methods
+      .createPool(
+        receiverGuardSeed,
+        "Receiver Guard",
+        new BN(100_000_000),
+        new BN(Math.floor(Date.now() / 1000) + 3600),
+        giftReceiver.publicKey
+      )
+      .accounts({
+        organizer: wallet.publicKey,
+        pool: receiverGuardPoolPda,
+        vault: receiverGuardVaultPda,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .rpc();
+
+    await program.methods
+      .contribute(new BN(100_000_000))
+      .accounts({
+        contributor: anotherContributor.publicKey,
+        pool: receiverGuardPoolPda,
+        vault: receiverGuardVaultPda,
+        contribution: receiverGuardContributionPda,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .signers([anotherContributor])
+      .rpc();
+
+    let finalizeError: unknown;
+    try {
+      await program.methods
+        .finalizePool()
+        .accounts({
+          organizer: wallet.publicKey,
+          pool: receiverGuardPoolPda,
+          vault: receiverGuardVaultPda,
+          receiver: anchor.web3.Keypair.generate().publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        })
+        .rpc();
+    } catch (error) {
+      finalizeError = error;
+    }
+
+    expect(finalizeError, "Expected finalize to reject an unstored receiver").to
+      .not.be.undefined;
+    expect((finalizeError as anchor.AnchorError).error.errorCode.code).to.equal(
+      "InvalidReceiver"
+    );
+  });
+
+  it("Rejects duplicate pool seeds for the same organizer", async () => {
+    let duplicateError: unknown;
+    try {
+      await program.methods
+        .createPool(
+          seed,
+          "Duplicate Birthday Gift",
+          targetAmount,
+          deadline,
+          giftReceiver.publicKey
+        )
+        .accounts({
+          organizer: wallet.publicKey,
+          pool: poolPda,
+          vault: vaultPda,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        })
+        .rpc();
+    } catch (error) {
+      duplicateError = error;
+    }
+
+    expect(duplicateError, "Expected duplicate pool creation to fail").to.not.be
+      .undefined;
+  });
+
+  it("Rejects pools with zero target amount", async () => {
+    const zeroTargetSeed = new BN(6);
+    const zeroTargetPoolPda = anchor.web3.PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("pool"),
+        wallet.publicKey.toBuffer(),
+        zeroTargetSeed.toArrayLike(Buffer, "le", 8),
+      ],
+      program.programId
+    )[0];
+    const zeroTargetVaultPda = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("vault"), zeroTargetPoolPda.toBuffer()],
+      program.programId
+    )[0];
+
+    let createError: unknown;
+    try {
+      await program.methods
+        .createPool(
+          zeroTargetSeed,
+          "Zero Target",
+          new BN(0),
+          new BN(Math.floor(Date.now() / 1000) + 3600),
+          giftReceiver.publicKey
+        )
+        .accounts({
+          organizer: wallet.publicKey,
+          pool: zeroTargetPoolPda,
+          vault: zeroTargetVaultPda,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        })
+        .rpc();
+    } catch (error) {
+      createError = error;
+    }
+
+    expect((createError as anchor.AnchorError).error.errorCode.code).to.equal(
+      "TargetAmountZero"
+    );
+  });
+
+  it("Rejects pools with a past deadline", async () => {
+    const pastDeadlineSeed = new BN(7);
+    const pastDeadlinePoolPda = anchor.web3.PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("pool"),
+        wallet.publicKey.toBuffer(),
+        pastDeadlineSeed.toArrayLike(Buffer, "le", 8),
+      ],
+      program.programId
+    )[0];
+    const pastDeadlineVaultPda = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("vault"), pastDeadlinePoolPda.toBuffer()],
+      program.programId
+    )[0];
+
+    let createError: unknown;
+    try {
+      await program.methods
+        .createPool(
+          pastDeadlineSeed,
+          "Past Deadline",
+          targetAmount,
+          new BN(Math.floor(Date.now() / 1000) - 1),
+          giftReceiver.publicKey
+        )
+        .accounts({
+          organizer: wallet.publicKey,
+          pool: pastDeadlinePoolPda,
+          vault: pastDeadlineVaultPda,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        })
+        .rpc();
+    } catch (error) {
+      createError = error;
+    }
+
+    expect((createError as anchor.AnchorError).error.errorCode.code).to.equal(
+      "DeadlineInPast"
+    );
+  });
+
+  it("Rejects zero-lamport contributions", async () => {
+    const zeroContributionSeed = new BN(8);
+    const zeroContributionPoolPda =
+      anchor.web3.PublicKey.findProgramAddressSync(
+        [
+          Buffer.from("pool"),
+          wallet.publicKey.toBuffer(),
+          zeroContributionSeed.toArrayLike(Buffer, "le", 8),
+        ],
+        program.programId
+      )[0];
+    const zeroContributionVaultPda =
+      anchor.web3.PublicKey.findProgramAddressSync(
+        [Buffer.from("vault"), zeroContributionPoolPda.toBuffer()],
+        program.programId
+      )[0];
+    const zeroContributionPda = anchor.web3.PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("contribution"),
+        zeroContributionPoolPda.toBuffer(),
+        anotherContributor.publicKey.toBuffer(),
+      ],
+      program.programId
+    )[0];
+
+    await program.methods
+      .createPool(
+        zeroContributionSeed,
+        "Zero Contribution Guard",
+        targetAmount,
+        new BN(Math.floor(Date.now() / 1000) + 3600),
+        giftReceiver.publicKey
+      )
+      .accounts({
+        organizer: wallet.publicKey,
+        pool: zeroContributionPoolPda,
+        vault: zeroContributionVaultPda,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .rpc();
+
+    let contributionError: unknown;
+    try {
+      await program.methods
+        .contribute(new BN(0))
+        .accounts({
+          contributor: anotherContributor.publicKey,
+          pool: zeroContributionPoolPda,
+          vault: zeroContributionVaultPda,
+          contribution: zeroContributionPda,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        })
+        .signers([anotherContributor])
+        .rpc();
+    } catch (error) {
+      contributionError = error;
+    }
+
+    expect(
+      (contributionError as anchor.AnchorError).error.errorCode.code
+    ).to.equal("ContributionAmountZero");
+  });
+
+  it("Rejects contributions after the deadline", async () => {
+    const lateContributionSeed = new BN(9);
+    const lateContributionPoolPda =
+      anchor.web3.PublicKey.findProgramAddressSync(
+        [
+          Buffer.from("pool"),
+          wallet.publicKey.toBuffer(),
+          lateContributionSeed.toArrayLike(Buffer, "le", 8),
+        ],
+        program.programId
+      )[0];
+    const lateContributionVaultPda =
+      anchor.web3.PublicKey.findProgramAddressSync(
+        [Buffer.from("vault"), lateContributionPoolPda.toBuffer()],
+        program.programId
+      )[0];
+    const lateContributionPda = anchor.web3.PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("contribution"),
+        lateContributionPoolPda.toBuffer(),
+        anotherContributor.publicKey.toBuffer(),
+      ],
+      program.programId
+    )[0];
+
+    await program.methods
+      .createPool(
+        lateContributionSeed,
+        "Late Contribution Guard",
+        targetAmount,
+        new BN(Math.floor(Date.now() / 1000) + 2),
+        giftReceiver.publicKey
+      )
+      .accounts({
+        organizer: wallet.publicKey,
+        pool: lateContributionPoolPda,
+        vault: lateContributionVaultPda,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .rpc();
+
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+
+    let contributionError: unknown;
+    try {
+      await program.methods
+        .contribute(new BN(100_000_000))
+        .accounts({
+          contributor: anotherContributor.publicKey,
+          pool: lateContributionPoolPda,
+          vault: lateContributionVaultPda,
+          contribution: lateContributionPda,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        })
+        .signers([anotherContributor])
+        .rpc();
+    } catch (error) {
+      contributionError = error;
+    }
+
+    expect(
+      (contributionError as anchor.AnchorError).error.errorCode.code
+    ).to.equal("DeadlinePassed");
+  });
+
+  it("Rejects finalize from a non-organizer", async () => {
+    const unauthorizedSeed = new BN(10);
+    const unauthorizedPoolPda = anchor.web3.PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("pool"),
+        wallet.publicKey.toBuffer(),
+        unauthorizedSeed.toArrayLike(Buffer, "le", 8),
+      ],
+      program.programId
+    )[0];
+    const unauthorizedVaultPda = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("vault"), unauthorizedPoolPda.toBuffer()],
+      program.programId
+    )[0];
+    const unauthorizedContributionPda =
+      anchor.web3.PublicKey.findProgramAddressSync(
+        [
+          Buffer.from("contribution"),
+          unauthorizedPoolPda.toBuffer(),
+          wallet.publicKey.toBuffer(),
+        ],
+        program.programId
+      )[0];
+
+    await program.methods
+      .createPool(
+        unauthorizedSeed,
+        "Unauthorized Finalize Guard",
+        new BN(100_000_000),
+        new BN(Math.floor(Date.now() / 1000) + 3600),
+        giftReceiver.publicKey
+      )
+      .accounts({
+        organizer: wallet.publicKey,
+        pool: unauthorizedPoolPda,
+        vault: unauthorizedVaultPda,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .rpc();
+
+    await program.methods
+      .contribute(new BN(100_000_000))
+      .accounts({
+        contributor: wallet.publicKey,
+        pool: unauthorizedPoolPda,
+        vault: unauthorizedVaultPda,
+        contribution: unauthorizedContributionPda,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .rpc();
+
+    let finalizeError: unknown;
+    try {
+      await program.methods
+        .finalizePool()
+        .accounts({
+          organizer: anotherContributor.publicKey,
+          pool: unauthorizedPoolPda,
+          vault: unauthorizedVaultPda,
+          receiver: giftReceiver.publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        })
+        .signers([anotherContributor])
+        .rpc();
+    } catch (error) {
+      finalizeError = error;
+    }
+
+    expect((finalizeError as anchor.AnchorError).error.errorCode.code).to.equal(
+      "Unauthorized"
     );
   });
 });

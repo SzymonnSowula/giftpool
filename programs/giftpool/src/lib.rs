@@ -101,6 +101,7 @@ pub struct RefundContribution<'info> {
     pub vault: SystemAccount<'info>,
     #[account(
         mut,
+        close = contributor,
         seeds = [b"contribution", pool.key().as_ref(), contributor.key().as_ref()],
         bump = contribution.bump,
         constraint = contribution.contributor == contributor.key() @ GiftPoolError::Unauthorized,
@@ -108,6 +109,39 @@ pub struct RefundContribution<'info> {
     )]
     pub contribution: Account<'info, ContributionAccount>,
     pub system_program: Program<'info, System>,
+}
+
+#[event]
+pub struct PoolCreated {
+    pub pool: Pubkey,
+    pub organizer: Pubkey,
+    pub receiver: Pubkey,
+    pub seed: u64,
+    pub target_amount: u64,
+    pub deadline: i64,
+}
+
+#[event]
+pub struct ContributionMade {
+    pub pool: Pubkey,
+    pub contributor: Pubkey,
+    pub amount: u64,
+    pub total_contributed: u64,
+}
+
+#[event]
+pub struct PoolFinalized {
+    pub pool: Pubkey,
+    pub receiver: Pubkey,
+    pub amount: u64,
+}
+
+#[event]
+pub struct ContributionRefunded {
+    pub pool: Pubkey,
+    pub contributor: Pubkey,
+    pub amount: u64,
+    pub remaining_contributed: u64,
 }
 
 #[program]
@@ -121,6 +155,7 @@ pub mod giftpool {
         name: String,
         target_amount: u64,
         deadline: i64,
+        receiver: Pubkey,
     ) -> Result<()> {
         require!(
             name.len() <= PoolAccount::MAX_NAME_LENGTH,
@@ -134,7 +169,7 @@ pub mod giftpool {
 
         let pool = &mut ctx.accounts.pool;
         pool.organizer = ctx.accounts.organizer.key();
-        pool.receiver = ctx.accounts.organizer.key();
+        pool.receiver = receiver;
         pool.seed = seed;
         pool.name = name;
         pool.target_amount = target_amount;
@@ -142,6 +177,15 @@ pub mod giftpool {
         pool.deadline = deadline;
         pool.status = PoolStatus::Open;
         pool.bump = ctx.bumps.pool;
+
+        emit!(PoolCreated {
+            pool: pool.key(),
+            organizer: pool.organizer,
+            receiver: pool.receiver,
+            seed,
+            target_amount,
+            deadline,
+        });
 
         msg!("Pool created: {}", pool.name);
         Ok(())
@@ -176,6 +220,13 @@ pub mod giftpool {
         contribution.refunded = false;
         contribution.bump = ctx.bumps.contribution;
 
+        emit!(ContributionMade {
+            pool: pool.key(),
+            contributor: contribution.contributor,
+            amount,
+            total_contributed: pool.total_contributed,
+        });
+
         msg!(
             "Contributed {} lamports to pool {}. Total: {}",
             amount,
@@ -189,6 +240,11 @@ pub mod giftpool {
         let pool = &mut ctx.accounts.pool;
         let vault = &ctx.accounts.vault;
         let receiver = &ctx.accounts.receiver;
+
+        require!(
+            receiver.key() == pool.receiver,
+            GiftPoolError::InvalidReceiver
+        );
 
         let amount = pool.total_contributed;
 
@@ -214,6 +270,12 @@ pub mod giftpool {
         )?;
 
         pool.status = PoolStatus::Closed;
+
+        emit!(PoolFinalized {
+            pool: pool.key(),
+            receiver: receiver.key(),
+            amount,
+        });
 
         msg!(
             "Pool finalized. Transferred {} lamports to receiver.",
@@ -270,6 +332,13 @@ pub mod giftpool {
         if pool.total_contributed == 0 {
             pool.status = PoolStatus::Closed;
         }
+
+        emit!(ContributionRefunded {
+            pool: pool.key(),
+            contributor: contributor.key(),
+            amount,
+            remaining_contributed: pool.total_contributed,
+        });
 
         msg!(
             "Refunded {} lamports to contributor {}",
