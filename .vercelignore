@@ -1,0 +1,16 @@
+node_modules
+target
+programs
+tests
+migrations
+app/cli.ts
+app/web/node_modules
+app/web/dist
+.anchor
+Cargo.lock
+Cargo.toml
+rust-toolchain.toml
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+!app/web/pnpm-lock.yaml
