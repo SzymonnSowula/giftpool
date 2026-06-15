@@ -12,5 +12,4 @@ Cargo.toml
 rust-toolchain.toml
 package-lock.json
 yarn.lock
-pnpm-lock.yaml
-!app/web/pnpm-lock.yaml
+app/web/package-lock.json

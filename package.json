@@ -1,6 +1,7 @@
 {
   "type": "module",
   "license": "ISC",
+  "packageManager": "pnpm@10.3.0",
   "scripts": {
     "lint:fix": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
     "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check"

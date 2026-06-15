@@ -5,3 +5,6 @@ target
 node_modules
 test-ledger
 .yarn
+package-lock.json
+yarn.lock
+app/web/package-lock.json
