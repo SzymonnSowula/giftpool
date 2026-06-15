@@ -1,6 +1,6 @@
 import { Buffer } from 'buffer'
-window.Buffer = Buffer
-globalThis.Buffer = Buffer
+;(window as any).Buffer = Buffer
+;(globalThis as any).Buffer = Buffer
 
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
