@@ -29,12 +29,12 @@ export function Header({ activeTab, onTabChange }: { activeTab: string; onTabCha
             type="button"
             onClick={() => chooseTab('pools')}
             className="flex shrink-0 items-center gap-3"
-            aria-label="Go to GiftPool home"
+            aria-label="Go to TrustPool home"
           >
             <span className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--border-strong)] bg-gradient-to-br from-white/[0.18] to-[rgba(255,122,144,0.28)] shadow-[var(--shadow-glow)]">
               <Gift size={17} className="text-white" strokeWidth={2.2} />
             </span>
-            <span className="text-base font-black tracking-normal text-white sm:text-lg">GiftPool</span>
+            <span className="text-base font-black tracking-normal text-white sm:text-lg">TrustPool</span>
           </button>
 
           <nav className="hidden flex-1 items-center justify-center gap-1.5 sm:flex">

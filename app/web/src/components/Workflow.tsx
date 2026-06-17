@@ -24,7 +24,7 @@ export function Workflow() {
           </h2>
         </div>
         <p className="max-w-md text-sm leading-6 text-[var(--text-muted)]">
-          GiftPool keeps the social flow simple while the smart contract handles custody,
+          TrustPool keeps the social flow simple while the smart contract handles custody,
           payout, and refunds.
         </p>
       </div>

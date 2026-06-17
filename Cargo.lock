@@ -558,7 +558,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "giftpool"
+name = "trustpool"
 version = "0.1.0"
 dependencies = [
  "anchor-lang",

@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 #[error_code]
-pub enum GiftPoolError {
+pub enum TrustPoolError {
     #[msg("Pool name too long")]
     NameTooLong,
     #[msg("Target amount must be greater than zero")]

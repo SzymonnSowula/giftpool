@@ -2,7 +2,7 @@ import { useCallback, useMemo } from "react";
 import { useAnchorWallet, useConnection } from "@solana/wallet-adapter-react";
 import { AnchorProvider, BorshAccountsCoder, Program, BN, web3 } from "@coral-xyz/anchor";
 import { Buffer } from "buffer";
-import idl from "../idl/giftpool.json";
+import idl from "../idl/trustpool.json";
 import type { NumericValue, PoolView } from "../types/pool";
 
 const PROGRAM_ID = new web3.PublicKey(

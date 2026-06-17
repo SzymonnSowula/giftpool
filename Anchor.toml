@@ -6,10 +6,10 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-giftpool = "88S4CSoaugjP3W6mFHq69vmHHa3J7xTaLrE21fzcCxDj"
+trustpool = "88S4CSoaugjP3W6mFHq69vmHHa3J7xTaLrE21fzcCxDj"
 
 [programs.devnet]
-giftpool = "88S4CSoaugjP3W6mFHq69vmHHa3J7xTaLrE21fzcCxDj"
+trustpool = "88S4CSoaugjP3W6mFHq69vmHHa3J7xTaLrE21fzcCxDj"
 
 [registry]
 url = "https://api.apr.dev"

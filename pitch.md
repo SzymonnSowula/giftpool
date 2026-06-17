@@ -1,115 +1,235 @@
-# GiftPool Pitch
+# TrustPool Pitch
 
-## 1. Pytanie otwierające
+## 1. Hook
 
-Ile razy wspólna zbiórka na prezent zaczynała się od dobrych intencji, a kończyła na chaosie w wiadomościach, ręcznym liczeniu przelewów i pytaniu: "kto właściwie trzyma pieniądze?"
+Wyobraź sobie: 15 osób zbiera na prezent ślubny. Organizator tworzy czat, podaje numer konta, ręcznie śledzi przelewy, przypomina, liczy, a na końcu bierze odpowiedzialność za 7500 zł cudzych pieniędzy.
 
-GiftPool odpowiada na ten prosty, bardzo ludzki problem: jak zebrać środki od grupy ludzi bez proszenia jednej osoby o bycie księgowym, skarbnikiem i punktem zaufania naraz.
+Teraz wyobraź sobie, że ta osoba znika. Albo się myli. Albo ktoś zapomina wpłacić i zbiórka się sypie.
+
+TrustPool rozwiązuje ten problem raz na zawsze: zamiast ufać osobie, grupa ufa kodowi.
 
 ## 2. Problem
 
-Dzisiejszy flow wspólnych prezentów jest nieformalny i kruchy. Organizator tworzy czat, podaje swój numer konta albo wallet, prosi znajomych o przelew, ręcznie śledzi kto zapłacił, a potem bierze na siebie odpowiedzialność za finalne rozliczenie.
+Wspólne zbiórki to chaos ukryty za dobrymi intencjami:
 
-To działa, dopóki wszyscy sobie ufają, kwoty są małe, a nikt nie zapomni o terminie. Przy większych grupach pojawiają się tarcia:
+**Dla organizatora:**
+- Ręczne śledzenie kto wpłacił, kto nie
+- Przypominanie, liczenie, rozliczanie
+- Odpowiedzialność za cudze pieniądze
+- Niezręczne pytania o status
 
-- brak przejrzystości, ile już zebrano,
-- brak automatycznej ścieżki zwrotu, jeśli zbiórka się nie uda,
-- zaufanie do jednej osoby trzymającej środki,
-- ręczne przypominanie, liczenie i rozliczanie,
-- brak prostego linku, który pokazuje status zbiórki.
+**Dla uczestników:**
+- Brak widoczności ile już zebrano
+- Niejasność co się stanie jak zbiórka się nie uda
+- Zaufanie do jednej osoby (która może zniknąć, pomylić się, stracić telefon)
+- Brak automatycznego zwrotu przy failu
+
+**Dla wszystkich:**
+- Żadnego publicznego, weryfikowalnego statusu
+- Żadnej gwarancji że środki trafią gdzie mają
+- Żadnej ochrony przed "zapomniałem że miałem wpłacić"
+
+To działa przy 3-5 osobach i małych kwotach. Przy większych grupach i poważniejszych celach - system się sypie.
 
 ## 3. Wizja
 
-GiftPool zamienia wspólną zbiórkę w przejrzysty, programowalny escrow. Zamiast ufać osobie, grupa ufa regułom zapisanym w smart kontrakcie.
+TrustPool zamienia każdą wspólną zbiórkę w programowalny, przejrzysty escrow.
 
-Wizja produktu jest prosta: każdy wspólny prezent powinien mieć własny publiczny pool, jasny cel, deadline, odbiorcę i automatyczne reguły wypłaty albo zwrotu.
+Każdy wspólny cel - prezent, projekt, inicjatywa - dostaje własny publiczny pool z jasnym celem, deadline'em, odbiorcą i automatycznymi regułami.
+
+Nie musisz ufać organizatorowi. Nie musisz ufać uczestnikom. Ufasz regułom zapisanym w smart kontrakcie, które wykonują się automatycznie.
 
 ## 4. Rozwiązanie
 
-GiftPool to aplikacja na Solanie, która pozwala organizatorowi stworzyć pool na wspólny prezent. Uczestnicy wpłacają SOL do vaulta kontrolowanego przez program. Jeśli cel zostanie osiągnięty, organizator finalizuje pool, a środki trafiają do wcześniej wskazanego odbiorcy. Jeśli deadline minie bez osiągnięcia celu, uczestnicy mogą odebrać swoje zwroty.
+TrustPool to aplikacja na Solanie która pozwala:
 
-Najważniejsze: środki nie trafiają do prywatnego walleta organizatora. Są przechowywane w program-controlled PDA vault, a wypłata działa tylko zgodnie z regułami poola.
+1. **Stworzyć pool** - organizator ustawia cel (SOL), deadline, wallet odbiorcy
+2. **Udostępnić link** - każdy dostaje publiczny adres poola i może zobaczyć status
+3. **Wpłacić** - uczestnicy wysyłają SOL do vaulta kontrolowanego przez program (nie do prywatnego walleta organizatora!)
+4. **Finalizować** - po osiągnięciu celu środki automatycznie trafiają do odbiorcy
+5. **Odebrać zwrot** - jeśli deadline minie bez osiągnięcia celu, każdy uczestnik samodzielnie claimuje refund
+
+Kluczowe: środki nigdy nie trafiają do prywatnego walleta organizatora. Są w program-controlled PDA vault. Wypłata działa tylko zgodnie z regułami poola.
 
 ## 5. Jak To Działa
 
+**Flow:**
+
+```
+Create → Share → Contribute → Finalize/Refund
+```
+
 1. **Create**  
-   Organizator ustawia nazwę prezentu, cel w SOL, deadline i wallet odbiorcy.
+   Organizator: nazwa poola, cel w SOL, deadline, wallet odbiorcy
 
 2. **Share**  
-   Aplikacja generuje publiczny adres poola i link, który można wysłać znajomym.
+   Aplikacja generuje publiczny link do poola (solana.com/pool/xyz)
 
 3. **Contribute**  
-   Każdy uczestnik wpłaca SOL do vaulta. Program zapisuje indywidualną kontrybucję.
+   Uczestnicy wpłacają SOL. Program zapisuje indywidualne kontrybucje.
 
-4. **Finalize**  
-   Jeśli zebrano wymaganą kwotę, organizator finalizuje pool. Program wypłaca środki wyłącznie do zapisanego odbiorcy.
+4. **Finalize** (jeśli cel osiągnięty)  
+   Organizator klika "Finalize". Program wypłaca środki wyłącznie do zapisanego odbiorcy.
 
-5. **Refund**  
-   Jeśli deadline minie i cel nie zostanie osiągnięty, każdy uczestnik może samodzielnie odebrać swój zwrot.
+5. **Refund** (jeśli deadline minął)  
+   Każdy uczestnik claimuje swój zwrot samodzielnie. Nie zależy od organizatora.
 
 ## 6. Dlaczego Solana
 
-GiftPool dobrze pasuje do Solany, bo produkt wymaga tanich, szybkich i publicznie weryfikowalnych transakcji. PDA vaults, Anchor constraints i deterministic accounts pozwalają zbudować escrow bez prywatnego klucza po stronie aplikacji.
+TrustPool wymaga:
+- **Tanich transakcji** - małe wpłaty nie mogą być zjadane przez fees
+- **Szybkich potwierdzeń** - UX musi być płynny
+- **Publicznej weryfikowalności** - każdy może sprawdzić transakcję w Explorerze
+- **PDA vaults** - vault bez prywatnego klucza, kontrolowany przez program
 
-Solana daje też naturalny UX dla małych, społecznościowych zbiórek: niskie koszty, szybkie potwierdzenia i łatwe linkowanie transakcji w Explorerze.
+Solana daje to wszystko naturalnie. Niskie koszty (~0.00025 SOL per tx), szybkie sloty (400ms), łatwe linkowanie do Explorer.
 
-## 7. Kluczowa Propozycja Wartości
+Dla consumer app z małymi zbiórkami ($50-500) to jedyny sensowny chain.
 
-GiftPool usuwa niezręczne pytanie "czy mogę Ci zaufać z pieniędzmi?" i zastępuje je przejrzystym linkiem do poola.
+## 7. Value Proposition
 
-Dla organizatora:
+**TrustPool usuwa pytanie "czy mogę Ci zaufać z pieniędzmi?" i zastępuje je linkiem do poola.**
 
-- mniej ręcznego liczenia,
-- prosty link do udostępnienia,
-- jasny status celu i deadline'u,
-- brak potrzeby trzymania cudzych pieniędzy.
+**Dla organizatora:**
+- Zero ręcznego liczenia
+- Prosty link do udostępnienia
+- Jasny status (X% zebrane, Y dni do deadline)
+- Brak odpowiedzialności za cudze środki
 
-Dla uczestnika:
+**Dla uczestnika:**
+- Widzisz ile zebrano (publiczny pool)
+- Wiesz jaki jest cel i deadline
+- Zwrot nie zależy od organizatora (claimujesz sam)
+- Wszystkie transakcje sprawdzalne w Explorerze
 
-- widać, gdzie trafiają środki,
-- wiadomo, jaki jest cel i deadline,
-- zwrot nie zależy od organizatora,
-- transakcje są sprawdzalne w Explorerze.
+**Dla odbiorcy:**
+- Środki trafiają na zapisany wallet
+- Finalizacja nie może przekierować pieniędzy (hardcoded recipient)
 
-Dla odbiorcy:
+## 8. Demo Pitch (30 sekund)
 
-- środki trafiają na zapisany wallet,
-- finalizacja nie może przekierować pieniędzy do innej osoby.
+"TrustPool to trustless escrow dla wspólnych zbiórek na Solanie. Zamiast prosić znajomego o trzymanie pieniędzy od grupy, organizator tworzy publiczny pool z celem, deadline'em i odbiorcą. Uczestnicy wpłacają SOL do vaulta kontrolowanego przez smart kontrakt. Jeśli cel zostanie osiągnięty - środki automatycznie trafiają do odbiorcy. Jeśli nie - każdy uczestnik samodzielnie claimuje zwrot. Zero zaufania do ludzi, pełna przejrzystość, automatyczne rozliczenie."
 
-## 8. Demo Pitch
+## 9. Use Cases
 
-"GiftPool is a trustless group-gift escrow on Solana. Instead of asking one friend to collect and manage everyone’s money, the organizer creates a public pool with a target, deadline, and receiver. Contributors send SOL into a program-controlled vault. If the pool reaches its target, funds are released to the receiver. If it fails, contributors can claim refunds themselves. The result is a cleaner group-gift flow: transparent, automated, and not dependent on one person holding the money."
+**Primary wedge (start):**
+- Wspólne prezenty (urodziny, śluby, rocznice)
+- Prezenty firmowe (od zespołu dla kolegi)
+- Małe inicjatywy społecznościowe (zbiórka na lokalny projekt)
 
-## 9. Pozycjonowanie
+**Expansion:**
+- Web3 community gifts (NFT drops, governance proposals)
+- Crowdfunding małych projektów (open source, hardware)
+- Group travel expenses (wspólne wakacje, eventy)
+- Charity micro-campaigns (szybkie zbiórki charytatywne)
 
-GiftPool nie próbuje być kolejną aplikacją do crowdfundingu wszystkiego. Najpierw skupia się na prostym, częstym i emocjonalnym use case: wspólne prezenty i małe zbiórki grupowe.
+**Dlaczego ten wedge:**
+- Częsty, emocjonalny, relacyjny
+- Małe kwoty ($50-500) = niski próg wejścia
+- Viral loop (każdy uczestnik widzi produkt)
+- Jasny pain point (każdy zna chaos z czatu)
 
-To daje produktowi czytelny wedge:
+## 10. Co Wyróżnia TrustPool
 
-- urodziny,
-- śluby,
-- prezenty firmowe,
-- małe inicjatywy społecznościowe,
-- kolekcjonerskie i web3 community gifts.
+**Nie jesteśmy kolejnym crowdfundingiem.**
 
-## 10. Co Wyróżnia Produkt
+Tradycyjne platformy (GoFundMe, Kickstarter):
+- Pobierają 5-10% fees
+- Wymagają weryfikacji KYC
+- Środki idą przez ich system
+- Długie procesy wypłat
+- Brak automatycznych refundów
 
-GiftPool łączy consumer-friendly UX z twardą logiką escrow:
+TrustPool:
+- Zero platform fees (tylko Solana network fees ~$0.001)
+- Bez KYC (wallet-only)
+- Środki w program-controlled vault (nie w naszym systemie)
+- Natychmiastowa finalizacja/refund
+- Pełna transparentność (publiczne transakcje)
 
-- publiczne pule,
-- deterministic PDA accounts,
-- vault bez prywatnego klucza,
-- zapisany odbiorca,
-- refundy po deadline,
-- Explorer links dla przejrzystości,
-- prosty flow create-share-contribute-finalize/refund.
+**Techniczna przewaga:**
+- PDA vaults bez prywatnego klucza
+- Deterministic accounts (każdy pool ma publiczny adres)
+- Anchor constraints (bezpieczeństwo na poziomie protokołu)
+- Explorer integration (weryfikowalność)
 
-## 11. Krótka Wersja
+## 11. Traction & Roadmap
 
-GiftPool lets friends collect money for a shared gift without trusting one person to hold the funds. The money sits in a Solana program vault, then either goes to the receiver when the target is reached or becomes refundable if the pool fails.
+**Obecnie:**
+- Program na Solana Devnet (deployed)
+- Web app (React + Vite + Anchor)
+- Core flow: create-contribute-finalize-refund
+- Vercel deployment (w trakcie)
 
-## 12. Call To Action
+**Q3 2026:**
+- Mainnet launch
+- Mobile-first PWA
+- Social sharing (OG tags, preview cards)
+- Recurring pools (comiesięczne składki)
 
-GiftPool zaczyna od prostego pytania: skoro smart kontrakty potrafią przechowywać i rozliczać środki automatycznie, dlaczego wspólne prezenty nadal rozliczamy jak arkusz kalkulacyjny w czacie?
+**Q4 2026:**
+- Multi-token support (USDC, inne SPL)
+- Milestone-based payouts (dla większych projektów)
+- Split payments (wielu odbiorców)
+- Time-locked contributions (vesting)
 
-Odpowiedzią jest produkt, który robi jedną rzecz dobrze: pozwala grupie zebrać środki przejrzyście, bez zaufanego pośrednika i z jasną ścieżką wypłaty albo zwrotu.
+**2027:**
+- DAO governance (community pools)
+- API dla integracji (Discord bots, Telegram)
+- Fiat on-ramp (Moonpay, Stripe)
+
+## 12. Business Model
+
+**Obecnie:** Non-profit (open source, community-first)
+
+**Monetyzacja (opcjonalna):**
+- Premium features (custom domains, branding)
+- Analytics dashboard (dla organizacji)
+- API access (dla botów/integracji)
+- Optional tip jar ("Support TrustPool")
+
+**Nie planujemy:**
+- % od transakcji (to by zabiło UX)
+- Reklamy
+- Sprzedaż danych
+
+## 13. Call To Action
+
+TrustPool zaczyna od prostego pytania:
+
+**Skoro smart kontrakty potrafią automatycznie przechowywać i rozliczać środki, dlaczego wspólne zbiórki nadal działają jak arkusz kalkulacyjny w czacie?**
+
+Odpowiedź: bo nikt nie zbudował produktu, który robi to dobrze.
+
+My budujemy.
+
+Jeśli wierzysz że:
+- Zaufanie powinno być opcjonalne, nie wymagane
+- Transparentność jest wartością samą w sobie
+- Technologia powinna usuwać tarcie, nie je tworzyć
+
+...to TrustPool jest dla Ciebie.
+
+**Join us:** [GitHub] [Discord] [Twitter]
+
+---
+
+## Appendix: Technical Details
+
+**Stack:**
+- Program: Rust + Anchor 0.32.1
+- Frontend: React 19 + Vite 8 + TypeScript
+- Wallet adapter: Phantom, Solflare
+- Deployment: Vercel (frontend), Solana Devnet/Mainnet (program)
+
+**Smart Contract:**
+- Program ID: `88S4CSoaugjP3W6mFHq69vmHHa3J7xTaLrE21fzcCxDj` (Devnet)
+- PDA vaults (program-controlled, no private key)
+- Deterministic account derivation
+- Anchor constraints for security
+
+**Security:**
+- Funds never touch organizer's wallet
+- Recipient hardcoded at creation
+- Deadline enforced by program
+- Refund logic independent of organizer

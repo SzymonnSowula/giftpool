@@ -1,12 +1,12 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program, BN } from "@coral-xyz/anchor";
-import { Giftpool } from "../target/types/giftpool";
+import { Trustpool } from "../target/types/trustpool";
 import { expect } from "chai";
 
-describe("giftpool", () => {
+describe("trustpool", () => {
   anchor.setProvider(anchor.AnchorProvider.env());
 
-  const program = anchor.workspace.giftpool as Program<Giftpool>;
+  const program = anchor.workspace.trustpool as Program<Trustpool>;
   const provider = anchor.getProvider();
   const wallet = provider.wallet as anchor.Wallet;
   const giftReceiver = anchor.web3.Keypair.generate();

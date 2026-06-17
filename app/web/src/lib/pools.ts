@@ -24,7 +24,7 @@ export function getContributionGuidance() {
   return {
     title: 'Where to send SOL',
     body:
-      'Use the contribution buttons below. Do not manually send SOL to the pool account or receiver address; the app routes your payment through the GiftPool program vault.',
+      'Use the contribution buttons below. Do not manually send SOL to the pool account or receiver address; the app routes your payment through the TrustPool program vault.',
     note: 'Pool account is for inspection. Receiver gets paid only after finalization.',
   }
 }

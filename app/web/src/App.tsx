@@ -142,7 +142,7 @@ function App() {
                     ? 'Set the gift target, deadline, and vault rules in a few calm steps.'
                     : selectedPool
                       ? 'Contribute, share, finalize, or claim refunds from one focused view.'
-                      : 'Browse public GiftPool campaigns and jump into the ones you care about.'}
+                      : 'Browse public TrustPool campaigns and jump into the ones you care about.'}
                 </p>
               </div>
               <div className="hidden rounded-full border border-[var(--border)] bg-white/[0.05] px-4 py-2 text-xs font-black uppercase text-[var(--text-muted)] sm:block">
@@ -185,7 +185,7 @@ function App() {
           </section>
         </main>
         <footer className="border-t border-[var(--border)] px-6 py-8 text-center text-sm text-[var(--text-muted)]">
-          GiftPool - trustless group gifting on Solana Devnet
+          TrustPool - trustless group gifting on Solana Devnet
         </footer>
       </div>
     </ToastProvider>

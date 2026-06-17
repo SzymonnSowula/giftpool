@@ -1,10 +1,10 @@
 <div align="center">
 
-# GiftPool
+# TrustPool
 
 **Trustless group-gift escrow on Solana**
 
-GiftPool lets friends collect SOL for a shared gift without trusting one person to hold the money. Funds sit in a program-controlled PDA vault, then either settle to the receiver when the target is reached or become refundable if the pool misses its deadline.
+TrustPool lets friends collect SOL for a shared gift without trusting one person to hold the money. Funds sit in a program-controlled PDA vault, then either settle to the receiver when the target is reached or become refundable if the pool misses its deadline.
 
 [![Anchor](https://img.shields.io/badge/Anchor-0.32.1-6f5cff?style=for-the-badge)](https://www.anchor-lang.com/)
 [![Solana](https://img.shields.io/badge/Solana-Devnet-14f195?style=for-the-badge)](https://solana.com/)
@@ -19,7 +19,7 @@ GiftPool lets friends collect SOL for a shared gift without trusting one person 
 
 ## Overview
 
-GiftPool replaces the usual "one person collects everything" group-gift flow with a transparent on-chain escrow.
+TrustPool replaces the usual "one person collects everything" group-gift flow with a transparent on-chain escrow.
 
 | Role        | What they do                                   | What the program guarantees                        |
 | ----------- | ---------------------------------------------- | -------------------------------------------------- |
@@ -45,7 +45,7 @@ flowchart LR
 
 ## On-Chain Model
 
-GiftPool uses the standard Solana escrow shape: deterministic PDAs, a vault with no private key, and program signing through `invoke_signed`.
+TrustPool uses the standard Solana escrow shape: deterministic PDAs, a vault with no private key, and program signing through `invoke_signed`.
 
 | Account               | PDA seeds                             | Purpose                                                          |
 | --------------------- | ------------------------------------- | ---------------------------------------------------------------- |
@@ -81,7 +81,7 @@ Closed
 
 ## Why This Fits Solana
 
-| Solana primitive   | How GiftPool uses it                                                          |
+| Solana primitive   | How TrustPool uses it                                                          |
 | ------------------ | ----------------------------------------------------------------------------- |
 | PDAs               | Pool, vault, and contribution accounts have deterministic addresses           |
 | System Program CPI | Contributions use normal SOL transfers into the vault                         |
@@ -152,7 +152,7 @@ npm run dev
 
 ## Tests
 
-The Anchor suite lives in `tests/giftpool.ts`.
+The Anchor suite lives in `tests/trustpool.ts`.
 
 ```bash
 anchor test
@@ -187,13 +187,13 @@ npx ts-node --transpile-only app/cli.ts info <pool_pubkey>
 ## Repository Map
 
 ```text
-programs/giftpool/src/
+programs/trustpool/src/
   lib.rs                         Anchor account contexts and instruction handlers
   errors.rs                      Program error codes
   state/
     pool_account.rs              PoolAccount and PoolStatus
     contribution_account.rs      ContributionAccount
-tests/giftpool.ts                Anchor integration tests
+tests/trustpool.ts               Anchor integration tests
 app/cli.ts                       Devnet CLI client
 app/web/                         React frontend
 Anchor.toml                      Anchor workspace and test script

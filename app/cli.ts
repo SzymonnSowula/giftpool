@@ -1,5 +1,5 @@
 import { AnchorProvider, BN, Program, Wallet, web3 } from "@coral-xyz/anchor";
-import { Giftpool } from "../target/types/giftpool";
+import { Trustpool } from "../target/types/trustpool";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -22,7 +22,7 @@ function getProvider() {
 }
 
 function getProgram(provider: AnchorProvider) {
-  const idl = JSON.parse(fs.readFileSync("target/idl/giftpool.json", "utf-8"));
+  const idl = JSON.parse(fs.readFileSync("target/idl/trustpool.json", "utf-8"));
   return new Program(idl, provider) as Program<Giftpool>;
 }
 

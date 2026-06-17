@@ -12,7 +12,7 @@ export const workflowSteps: WorkflowStep[] = [
     id: 'create',
     kicker: '01',
     title: 'Create the pool',
-    body: 'The organizer sets the gift name, target amount, deadline, and receiver wallet. GiftPool derives the pool PDA and vault PDA from those rules.',
+    body: 'The organizer sets the gift name, target amount, deadline, and receiver wallet. TrustPool derives the pool PDA and vault PDA from those rules.',
   },
   {
     id: 'share',

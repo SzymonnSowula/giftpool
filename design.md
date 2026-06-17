@@ -1,6 +1,6 @@
-# GiftPool Design
+# TrustPool Design
 
-GiftPool is a Solana escrow for group gifts. The organizer creates a pool, contributors send SOL into a PDA vault, and the program releases funds only to the receiver fixed at creation time once the target is met. If the deadline passes before the target is met, each contributor can claim their own refund.
+TrustPool is a Solana escrow for group gifts. The organizer creates a pool, contributors send SOL into a PDA vault, and the program releases funds only to the receiver fixed at creation time once the target is met. If the deadline passes before the target is met, each contributor can claim their own refund.
 
 ## Account Model
 
