@@ -8,6 +8,211 @@
   },
   "instructions": [
     {
+      "name": "approve_milestone",
+      "discriminator": [
+        145,
+        85,
+        92,
+        60,
+        50,
+        130,
+        219,
+        106
+      ],
+      "accounts": [
+        {
+          "name": "contributor",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool.organizer",
+                "account": "PoolAccount"
+              },
+              {
+                "kind": "account",
+                "path": "pool.seed",
+                "account": "PoolAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "milestone",
+          "writable": true
+        },
+        {
+          "name": "contribution",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  116,
+                  114,
+                  105,
+                  98,
+                  117,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool"
+              },
+              {
+                "kind": "account",
+                "path": "contributor"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "complete_service",
+      "discriminator": [
+        112,
+        141,
+        81,
+        46,
+        55,
+        223,
+        156,
+        82
+      ],
+      "accounts": [
+        {
+          "name": "provider",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "exchange",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  120,
+                  99,
+                  104,
+                  97,
+                  110,
+                  103,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "service"
+              },
+              {
+                "kind": "account",
+                "path": "exchange.requester",
+                "account": "ServiceExchangeAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "service",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  101,
+                  114,
+                  118,
+                  105,
+                  99,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool"
+              },
+              {
+                "kind": "account",
+                "path": "service.provider",
+                "account": "ServiceOfferingAccount"
+              },
+              {
+                "kind": "arg",
+                "path": "service_seed"
+              }
+            ]
+          }
+        },
+        {
+          "name": "pool",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool.organizer",
+                "account": "PoolAccount"
+              },
+              {
+                "kind": "account",
+                "path": "pool.seed",
+                "account": "PoolAccount"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "_service_seed",
+          "type": "u64"
+        }
+      ]
+    },
+    {
       "name": "contribute",
       "discriminator": [
         82,
@@ -116,6 +321,144 @@
         {
           "name": "amount",
           "type": "u64"
+        },
+        {
+          "name": "candidate_index",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "create_candidate",
+      "discriminator": [
+        60,
+        206,
+        192,
+        133,
+        16,
+        210,
+        22,
+        23
+      ],
+      "accounts": [
+        {
+          "name": "organizer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool.organizer",
+                "account": "PoolAccount"
+              },
+              {
+                "kind": "account",
+                "path": "pool.seed",
+                "account": "PoolAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "candidate",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u8"
+        },
+        {
+          "name": "pubkey",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "create_milestone",
+      "discriminator": [
+        239,
+        58,
+        201,
+        28,
+        40,
+        186,
+        173,
+        48
+      ],
+      "accounts": [
+        {
+          "name": "organizer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool.organizer",
+                "account": "PoolAccount"
+              },
+              {
+                "kind": "account",
+                "path": "pool.seed",
+                "account": "PoolAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "milestone",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u8"
+        },
+        {
+          "name": "description",
+          "type": "string"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
         }
       ]
     },
@@ -208,6 +551,263 @@
         {
           "name": "receiver",
           "type": "pubkey"
+        },
+        {
+          "name": "recurrence",
+          "type": {
+            "defined": {
+              "name": "Recurrence"
+            }
+          }
+        },
+        {
+          "name": "max_cycles",
+          "type": "u8"
+        },
+        {
+          "name": "voting_mode",
+          "type": {
+            "defined": {
+              "name": "VotingMode"
+            }
+          }
+        },
+        {
+          "name": "split_type",
+          "type": {
+            "defined": {
+              "name": "SplitType"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "create_split_member",
+      "discriminator": [
+        226,
+        197,
+        81,
+        45,
+        162,
+        254,
+        170,
+        94
+      ],
+      "accounts": [
+        {
+          "name": "organizer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool.organizer",
+                "account": "PoolAccount"
+              },
+              {
+                "kind": "account",
+                "path": "pool.seed",
+                "account": "PoolAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "split_member",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  112,
+                  108,
+                  105,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool"
+              },
+              {
+                "kind": "account",
+                "path": "member"
+              }
+            ]
+          }
+        },
+        {
+          "name": "member"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "weight",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "dispute_service",
+      "discriminator": [
+        203,
+        214,
+        233,
+        119,
+        179,
+        155,
+        68,
+        50
+      ],
+      "accounts": [
+        {
+          "name": "requester",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "exchange",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  120,
+                  99,
+                  104,
+                  97,
+                  110,
+                  103,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "service"
+              },
+              {
+                "kind": "account",
+                "path": "exchange.requester",
+                "account": "ServiceExchangeAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "credit",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  114,
+                  101,
+                  100,
+                  105,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool"
+              },
+              {
+                "kind": "account",
+                "path": "exchange.requester",
+                "account": "ServiceExchangeAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "service",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  101,
+                  114,
+                  118,
+                  105,
+                  99,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool"
+              },
+              {
+                "kind": "account",
+                "path": "service.provider",
+                "account": "ServiceOfferingAccount"
+              },
+              {
+                "kind": "arg",
+                "path": "service_seed"
+              }
+            ]
+          }
+        },
+        {
+          "name": "pool",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool.organizer",
+                "account": "PoolAccount"
+              },
+              {
+                "kind": "account",
+                "path": "pool.seed",
+                "account": "PoolAccount"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "_service_seed",
+          "type": "u64"
         }
       ]
     },
@@ -288,6 +888,180 @@
         }
       ],
       "args": []
+    },
+    {
+      "name": "finalize_with_voting",
+      "discriminator": [
+        110,
+        125,
+        237,
+        224,
+        3,
+        106,
+        54,
+        29
+      ],
+      "accounts": [
+        {
+          "name": "organizer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool.organizer",
+                "account": "PoolAccount"
+              },
+              {
+                "kind": "account",
+                "path": "pool.seed",
+                "account": "PoolAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "winner",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "offer_service",
+      "discriminator": [
+        46,
+        132,
+        165,
+        133,
+        17,
+        248,
+        176,
+        209
+      ],
+      "accounts": [
+        {
+          "name": "provider",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "pool",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool.organizer",
+                "account": "PoolAccount"
+              },
+              {
+                "kind": "account",
+                "path": "pool.seed",
+                "account": "PoolAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "service",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  101,
+                  114,
+                  118,
+                  105,
+                  99,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool"
+              },
+              {
+                "kind": "account",
+                "path": "provider"
+              },
+              {
+                "kind": "arg",
+                "path": "service_seed"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "_service_seed",
+          "type": "u64"
+        },
+        {
+          "name": "description",
+          "type": "string"
+        },
+        {
+          "name": "hours_cost",
+          "type": "u64"
+        }
+      ]
     },
     {
       "name": "refund_contribution",
@@ -395,9 +1169,407 @@
         }
       ],
       "args": []
+    },
+    {
+      "name": "release_milestone",
+      "discriminator": [
+        56,
+        2,
+        199,
+        164,
+        184,
+        108,
+        167,
+        222
+      ],
+      "accounts": [
+        {
+          "name": "organizer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool.organizer",
+                "account": "PoolAccount"
+              },
+              {
+                "kind": "account",
+                "path": "pool.seed",
+                "account": "PoolAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "milestone",
+          "writable": true
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "receiver",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "request_service",
+      "discriminator": [
+        243,
+        166,
+        255,
+        242,
+        183,
+        255,
+        14,
+        59
+      ],
+      "accounts": [
+        {
+          "name": "requester",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "service",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  101,
+                  114,
+                  118,
+                  105,
+                  99,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool"
+              },
+              {
+                "kind": "account",
+                "path": "service.provider",
+                "account": "ServiceOfferingAccount"
+              },
+              {
+                "kind": "arg",
+                "path": "service_seed"
+              }
+            ]
+          }
+        },
+        {
+          "name": "credit",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  114,
+                  101,
+                  100,
+                  105,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool"
+              },
+              {
+                "kind": "account",
+                "path": "requester"
+              }
+            ]
+          }
+        },
+        {
+          "name": "exchange",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  120,
+                  99,
+                  104,
+                  97,
+                  110,
+                  103,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "service"
+              },
+              {
+                "kind": "account",
+                "path": "requester"
+              }
+            ]
+          }
+        },
+        {
+          "name": "pool",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool.organizer",
+                "account": "PoolAccount"
+              },
+              {
+                "kind": "account",
+                "path": "pool.seed",
+                "account": "PoolAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "_service_seed",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "rollover_pool",
+      "discriminator": [
+        175,
+        240,
+        58,
+        135,
+        242,
+        246,
+        186,
+        249
+      ],
+      "accounts": [
+        {
+          "name": "organizer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool.organizer",
+                "account": "PoolAccount"
+              },
+              {
+                "kind": "account",
+                "path": "pool.seed",
+                "account": "PoolAccount"
+              }
+            ]
+          }
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "settle_split",
+      "discriminator": [
+        3,
+        170,
+        152,
+        217,
+        94,
+        9,
+        9,
+        213
+      ],
+      "accounts": [
+        {
+          "name": "organizer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool.organizer",
+                "account": "PoolAccount"
+              },
+              {
+                "kind": "account",
+                "path": "pool.seed",
+                "account": "PoolAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "split_member",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  112,
+                  108,
+                  105,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool"
+              },
+              {
+                "kind": "account",
+                "path": "split_member.member",
+                "account": "SplitMemberAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "member",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
     }
   ],
   "accounts": [
+    {
+      "name": "CandidateAccount",
+      "discriminator": [
+        69,
+        203,
+        73,
+        43,
+        203,
+        170,
+        96,
+        121
+      ]
+    },
     {
       "name": "ContributionAccount",
       "discriminator": [
@@ -412,6 +1584,19 @@
       ]
     },
     {
+      "name": "MilestoneAccount",
+      "discriminator": [
+        21,
+        222,
+        32,
+        140,
+        43,
+        166,
+        109,
+        19
+      ]
+    },
+    {
       "name": "PoolAccount",
       "discriminator": [
         116,
@@ -423,9 +1608,74 @@
         52,
         137
       ]
+    },
+    {
+      "name": "ServiceExchangeAccount",
+      "discriminator": [
+        203,
+        22,
+        28,
+        163,
+        37,
+        9,
+        70,
+        74
+      ]
+    },
+    {
+      "name": "ServiceOfferingAccount",
+      "discriminator": [
+        172,
+        232,
+        221,
+        209,
+        27,
+        9,
+        12,
+        135
+      ]
+    },
+    {
+      "name": "SplitMemberAccount",
+      "discriminator": [
+        86,
+        243,
+        29,
+        175,
+        72,
+        53,
+        236,
+        214
+      ]
+    },
+    {
+      "name": "TimeCreditAccount",
+      "discriminator": [
+        118,
+        236,
+        226,
+        10,
+        188,
+        121,
+        37,
+        174
+      ]
     }
   ],
   "events": [
+    {
+      "name": "CandidateCreated",
+      "discriminator": [
+        255,
+        230,
+        90,
+        131,
+        76,
+        71,
+        221,
+        81
+      ]
+    },
     {
       "name": "ContributionMade",
       "discriminator": [
@@ -453,6 +1703,45 @@
       ]
     },
     {
+      "name": "MilestoneApproved",
+      "discriminator": [
+        40,
+        109,
+        159,
+        144,
+        169,
+        230,
+        35,
+        229
+      ]
+    },
+    {
+      "name": "MilestoneCreated",
+      "discriminator": [
+        151,
+        154,
+        159,
+        254,
+        50,
+        174,
+        22,
+        209
+      ]
+    },
+    {
+      "name": "MilestoneReleased",
+      "discriminator": [
+        49,
+        225,
+        91,
+        223,
+        34,
+        165,
+        109,
+        181
+      ]
+    },
+    {
       "name": "PoolCreated",
       "discriminator": [
         202,
@@ -476,6 +1765,97 @@
         220,
         39,
         186
+      ]
+    },
+    {
+      "name": "PoolRolledOver",
+      "discriminator": [
+        94,
+        98,
+        99,
+        236,
+        107,
+        82,
+        62,
+        130
+      ]
+    },
+    {
+      "name": "ServiceCompleted",
+      "discriminator": [
+        114,
+        23,
+        198,
+        165,
+        244,
+        174,
+        116,
+        50
+      ]
+    },
+    {
+      "name": "ServiceDisputed",
+      "discriminator": [
+        101,
+        143,
+        48,
+        74,
+        171,
+        75,
+        98,
+        73
+      ]
+    },
+    {
+      "name": "ServiceOffered",
+      "discriminator": [
+        95,
+        202,
+        242,
+        30,
+        8,
+        41,
+        124,
+        190
+      ]
+    },
+    {
+      "name": "ServiceRequested",
+      "discriminator": [
+        106,
+        213,
+        228,
+        107,
+        55,
+        34,
+        238,
+        36
+      ]
+    },
+    {
+      "name": "SplitMemberCreated",
+      "discriminator": [
+        122,
+        34,
+        49,
+        171,
+        219,
+        115,
+        166,
+        160
+      ]
+    },
+    {
+      "name": "SplitSettled",
+      "discriminator": [
+        233,
+        242,
+        76,
+        2,
+        61,
+        42,
+        68,
+        122
       ]
     }
   ],
@@ -544,9 +1924,177 @@
       "code": 6012,
       "name": "InvalidReceiver",
       "msg": "Receiver does not match the receiver stored on the pool"
+    },
+    {
+      "code": 6013,
+      "name": "MilestoneDescriptionTooLong",
+      "msg": "Milestone description too long"
+    },
+    {
+      "code": 6014,
+      "name": "MilestoneAmountZero",
+      "msg": "Milestone amount must be greater than zero"
+    },
+    {
+      "code": 6015,
+      "name": "MilestonesExceedTarget",
+      "msg": "Milestones total exceeds pool target"
+    },
+    {
+      "code": 6016,
+      "name": "MilestoneIndexOutOfRange",
+      "msg": "Milestone index out of range"
+    },
+    {
+      "code": 6017,
+      "name": "MilestoneAlreadyApproved",
+      "msg": "Milestone already approved by this contributor"
+    },
+    {
+      "code": 6018,
+      "name": "MilestoneNotApproved",
+      "msg": "Milestone not approved by majority"
+    },
+    {
+      "code": 6019,
+      "name": "MilestoneAlreadyReleased",
+      "msg": "Milestone already released"
+    },
+    {
+      "code": 6020,
+      "name": "NoMilestonesConfigured",
+      "msg": "Pool has no milestones configured"
+    },
+    {
+      "code": 6021,
+      "name": "MilestonesSumMismatch",
+      "msg": "Milestones must sum exactly to target amount"
+    },
+    {
+      "code": 6022,
+      "name": "PoolNotRecurring",
+      "msg": "Pool is not recurring"
+    },
+    {
+      "code": 6023,
+      "name": "MaxCyclesReached",
+      "msg": "Pool has reached maximum cycles"
+    },
+    {
+      "code": 6024,
+      "name": "PoolNotClosedForRollover",
+      "msg": "Pool must be closed to rollover"
+    },
+    {
+      "code": 6025,
+      "name": "CandidateIndexOutOfRange",
+      "msg": "Candidate index out of range"
+    },
+    {
+      "code": 6026,
+      "name": "PoolNotVotingMode",
+      "msg": "Pool is not in voting mode"
+    },
+    {
+      "code": 6027,
+      "name": "ServiceDescriptionTooLong",
+      "msg": "Service description too long"
+    },
+    {
+      "code": 6028,
+      "name": "InsufficientCredits",
+      "msg": "Insufficient time credits"
+    },
+    {
+      "code": 6029,
+      "name": "ServiceNotAvailable",
+      "msg": "Service not available"
+    },
+    {
+      "code": 6030,
+      "name": "ExchangeNotPending",
+      "msg": "Exchange not pending"
+    },
+    {
+      "code": 6031,
+      "name": "CannotDisputeOwn",
+      "msg": "Cannot dispute own service"
+    },
+    {
+      "code": 6032,
+      "name": "HoursZero",
+      "msg": "Hours must be greater than zero"
+    },
+    {
+      "code": 6033,
+      "name": "TooManySplitMembers",
+      "msg": "Too many split members (max 10)"
+    },
+    {
+      "code": 6034,
+      "name": "SplitMemberNotFound",
+      "msg": "Split member not found"
+    },
+    {
+      "code": 6035,
+      "name": "SplitAlreadySettled",
+      "msg": "Split already settled"
+    },
+    {
+      "code": 6036,
+      "name": "SplitNotSettled",
+      "msg": "Split not settled yet"
     }
   ],
   "types": [
+    {
+      "name": "CandidateAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "index",
+            "type": "u8"
+          },
+          {
+            "name": "pubkey",
+            "type": "pubkey"
+          },
+          {
+            "name": "votes",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CandidateCreated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "index",
+            "type": "u8"
+          },
+          {
+            "name": "pubkey",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
     {
       "name": "ContributionAccount",
       "type": {
@@ -571,6 +2119,22 @@
           {
             "name": "bump",
             "type": "u8"
+          },
+          {
+            "name": "candidate_index",
+            "type": "u8"
+          },
+          {
+            "name": "has_voted",
+            "type": "bool"
+          },
+          {
+            "name": "milestone_approvals",
+            "type": "u8"
+          },
+          {
+            "name": "credits_earned",
+            "type": "u64"
           }
         ]
       }
@@ -593,7 +2157,7 @@
             "type": "u64"
           },
           {
-            "name": "total_contributed",
+            "name": "total",
             "type": "u64"
           }
         ]
@@ -615,9 +2179,125 @@
           {
             "name": "amount",
             "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ExchangeStatus",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Pending"
           },
           {
-            "name": "remaining_contributed",
+            "name": "Completed"
+          },
+          {
+            "name": "Disputed"
+          },
+          {
+            "name": "Refunded"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MilestoneAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "index",
+            "type": "u8"
+          },
+          {
+            "name": "description",
+            "type": "string"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "approved",
+            "type": "bool"
+          },
+          {
+            "name": "approvals_count",
+            "type": "u16"
+          },
+          {
+            "name": "released",
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MilestoneApproved",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "index",
+            "type": "u8"
+          },
+          {
+            "name": "contributor",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MilestoneCreated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "index",
+            "type": "u8"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MilestoneReleased",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "index",
+            "type": "u8"
+          },
+          {
+            "name": "amount",
             "type": "u64"
           }
         ]
@@ -667,6 +2347,54 @@
           {
             "name": "bump",
             "type": "u8"
+          },
+          {
+            "name": "recurrence",
+            "type": {
+              "defined": {
+                "name": "Recurrence"
+              }
+            }
+          },
+          {
+            "name": "cycle_count",
+            "type": "u8"
+          },
+          {
+            "name": "max_cycles",
+            "type": "u8"
+          },
+          {
+            "name": "voting_mode",
+            "type": {
+              "defined": {
+                "name": "VotingMode"
+              }
+            }
+          },
+          {
+            "name": "candidates_count",
+            "type": "u8"
+          },
+          {
+            "name": "split_type",
+            "type": {
+              "defined": {
+                "name": "SplitType"
+              }
+            }
+          },
+          {
+            "name": "split_members_count",
+            "type": "u8"
+          },
+          {
+            "name": "milestones_count",
+            "type": "u8"
+          },
+          {
+            "name": "milestones_released",
+            "type": "u8"
           }
         ]
       }
@@ -687,10 +2415,6 @@
           {
             "name": "receiver",
             "type": "pubkey"
-          },
-          {
-            "name": "seed",
-            "type": "u64"
           },
           {
             "name": "target_amount",
@@ -724,6 +2448,26 @@
       }
     },
     {
+      "name": "PoolRolledOver",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "cycle",
+            "type": "u8"
+          },
+          {
+            "name": "new_deadline",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
       "name": "PoolStatus",
       "type": {
         "kind": "enum",
@@ -736,6 +2480,310 @@
           },
           {
             "name": "Closed"
+          },
+          {
+            "name": "MilestoneVoting"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Recurrence",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "None"
+          },
+          {
+            "name": "Weekly"
+          },
+          {
+            "name": "Monthly"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ServiceCompleted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "requester",
+            "type": "pubkey"
+          },
+          {
+            "name": "provider",
+            "type": "pubkey"
+          },
+          {
+            "name": "hours",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ServiceDisputed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "requester",
+            "type": "pubkey"
+          },
+          {
+            "name": "hours",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ServiceExchangeAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "offering",
+            "type": "pubkey"
+          },
+          {
+            "name": "requester",
+            "type": "pubkey"
+          },
+          {
+            "name": "provider",
+            "type": "pubkey"
+          },
+          {
+            "name": "hours",
+            "type": "u64"
+          },
+          {
+            "name": "status",
+            "type": {
+              "defined": {
+                "name": "ExchangeStatus"
+              }
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ServiceOffered",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "provider",
+            "type": "pubkey"
+          },
+          {
+            "name": "hours_cost",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ServiceOfferingAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "provider",
+            "type": "pubkey"
+          },
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "description",
+            "type": "string"
+          },
+          {
+            "name": "hours_cost",
+            "type": "u64"
+          },
+          {
+            "name": "available",
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ServiceRequested",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "requester",
+            "type": "pubkey"
+          },
+          {
+            "name": "provider",
+            "type": "pubkey"
+          },
+          {
+            "name": "hours",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SplitMemberAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "member",
+            "type": "pubkey"
+          },
+          {
+            "name": "weight",
+            "type": "u16"
+          },
+          {
+            "name": "amount_owed",
+            "type": "u64"
+          },
+          {
+            "name": "amount_paid",
+            "type": "u64"
+          },
+          {
+            "name": "settled",
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SplitMemberCreated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "member",
+            "type": "pubkey"
+          },
+          {
+            "name": "weight",
+            "type": "u16"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SplitSettled",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "member",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SplitType",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Equal"
+          },
+          {
+            "name": "Weighted"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TimeCreditAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "hours",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VotingMode",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "FixedReceiver"
+          },
+          {
+            "name": "ContributorVote"
           }
         ]
       }

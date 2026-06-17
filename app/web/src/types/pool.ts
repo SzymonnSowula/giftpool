@@ -15,11 +15,15 @@ export type PublicKeyLike =
       toBase58: () => string
     }
 
-export type PoolStatusName = 'open' | 'refunding' | 'closed' | 'unknown'
+export type PoolStatusName = 'open' | 'refunding' | 'closed' | 'milestoneVoting' | 'unknown'
 
 export type PoolPhaseId = 'open' | 'funded' | 'expired' | 'refunding' | 'closed' | 'unknown'
 
 export type PoolFilterStatus = 'all' | PoolPhaseId
+
+export type RecurrenceType = 'none' | 'weekly' | 'monthly'
+export type VotingModeType = 'fixedReceiver' | 'contributorVote'
+export type SplitTypeValue = 'equal' | 'weighted'
 
 export interface PoolView {
   address: PublicKeyLike
@@ -32,6 +36,15 @@ export interface PoolView {
   deadline: NumericValue
   status?: Record<string, unknown> | string | null
   bump?: number
+  recurrence?: RecurrenceType
+  cycleCount?: number
+  maxCycles?: number
+  votingMode?: VotingModeType
+  candidatesCount?: number
+  splitType?: SplitTypeValue
+  splitMembersCount?: number
+  milestonesCount?: number
+  milestonesReleased?: number
 }
 
 export interface PoolPhase {

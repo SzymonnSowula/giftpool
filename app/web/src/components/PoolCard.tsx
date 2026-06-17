@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { Clock, Target, Users, Share2 } from 'lucide-react'
+import { Clock, Target, Users, Share2, RefreshCw, Vote, Split } from 'lucide-react'
 import { Badge } from './ui/Badge'
 import { Progress } from './ui/Progress'
 import { lamportsToSol } from '../hooks/useProgram'
@@ -138,6 +138,30 @@ export function PoolCard({ pool, onClick, index }: { pool: PoolView; onClick: ()
         <span>{Math.round(Math.min(100, progress))}% complete</span>
         <span>{lamportsToSol(Math.max(0, target - total))} SOL left</span>
       </div>
+
+      {/* Feature badges */}
+      {(pool.recurrence !== 'none' || pool.votingMode === 'contributorVote' || pool.splitType === 'weighted') && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 12 }}>
+          {pool.recurrence && pool.recurrence !== 'none' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 'var(--r-xs)', background: 'var(--accent-bg)', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--accent)' }}>
+              <RefreshCw size={10} />
+              {pool.recurrence === 'weekly' ? 'Weekly' : 'Monthly'}
+            </div>
+          )}
+          {pool.votingMode === 'contributorVote' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 'var(--r-xs)', background: 'var(--info-bg)', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--info)' }}>
+              <Vote size={10} />
+              Voting
+            </div>
+          )}
+          {pool.splitType === 'weighted' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 'var(--r-xs)', background: 'var(--warning-bg)', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--warning)' }}>
+              <Split size={10} />
+              Weighted
+            </div>
+          )}
+        </div>
+      )}
     </motion.div>
   )
 }

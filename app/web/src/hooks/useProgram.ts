@@ -24,6 +24,23 @@ interface DecodedPoolAccount {
   deadline: NumericValue;
   status?: Record<string, unknown> | string | null;
   bump?: number;
+  recurrence?: Record<string, unknown>;
+  cycle_count?: number;
+  cycleCount?: number;
+  max_cycles?: number;
+  maxCycles?: number;
+  voting_mode?: Record<string, unknown>;
+  votingMode?: Record<string, unknown>;
+  candidates_count?: number;
+  candidatesCount?: number;
+  split_type?: Record<string, unknown>;
+  splitType?: Record<string, unknown>;
+  split_members_count?: number;
+  splitMembersCount?: number;
+  milestones_count?: number;
+  milestonesCount?: number;
+  milestones_released?: number;
+  milestonesReleased?: number;
 }
 
 function hasPoolDiscriminator(data: Uint8Array) {
@@ -34,6 +51,25 @@ function hasPoolDiscriminator(data: Uint8Array) {
 function decodePoolAccount(address: web3.PublicKey, data: Uint8Array): PoolView | null {
   try {
     const decoded = coder.decode("PoolAccount", Buffer.from(data)) as DecodedPoolAccount;
+    
+    // Debug: log raw enum values
+    console.log('Raw decoded enums:', {
+      recurrence: decoded.recurrence,
+      votingMode: decoded.voting_mode ?? decoded.votingMode,
+      splitType: decoded.split_type ?? decoded.splitType,
+    });
+    
+    // Helper to extract enum variant name (Anchor returns camelCase after IDL conversion)
+    const getEnumName = (obj: Record<string, unknown> | string | undefined): string | undefined => {
+      if (!obj) return undefined;
+      // If it's already a string, return as-is
+      if (typeof obj === 'string') return obj;
+      const keys = Object.keys(obj);
+      if (keys.length === 0) return undefined;
+      // Anchor returns camelCase after IDL conversion, so just return the key
+      return keys[0];
+    };
+    
     return {
       address,
       organizer: decoded.organizer,
@@ -45,6 +81,15 @@ function decodePoolAccount(address: web3.PublicKey, data: Uint8Array): PoolView 
       deadline: decoded.deadline,
       status: decoded.status,
       bump: decoded.bump,
+      recurrence: (getEnumName(decoded.recurrence) ?? 'none') as PoolView['recurrence'],
+      cycleCount: decoded.cycle_count ?? decoded.cycleCount ?? 0,
+      maxCycles: decoded.max_cycles ?? decoded.maxCycles ?? 0,
+      votingMode: (getEnumName(decoded.voting_mode ?? decoded.votingMode) ?? 'fixedReceiver') as PoolView['votingMode'],
+      candidatesCount: decoded.candidates_count ?? decoded.candidatesCount ?? 0,
+      splitType: (getEnumName(decoded.split_type ?? decoded.splitType) ?? 'equal') as PoolView['splitType'],
+      splitMembersCount: decoded.split_members_count ?? decoded.splitMembersCount ?? 0,
+      milestonesCount: decoded.milestones_count ?? decoded.milestonesCount ?? 0,
+      milestonesReleased: decoded.milestones_released ?? decoded.milestonesReleased ?? 0,
     };
   } catch {
     return null;

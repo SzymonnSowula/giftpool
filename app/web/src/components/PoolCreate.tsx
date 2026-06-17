@@ -1,15 +1,16 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, ArrowRight, RefreshCw } from 'lucide-react'
+import { Plus, ArrowRight, RefreshCw, Settings } from 'lucide-react'
 import { useProgram, derivePoolPda, deriveVaultPda, solToLamports, explorerTxUrl } from '../hooks/useProgram'
 import { useToast } from './ui/Toast'
 import { Button } from './ui/Button'
 import { Input } from './ui/Input'
 import { Card } from './ui/Card'
+import { Tooltip } from './ui/Tooltip'
 import { BN } from '@coral-xyz/anchor'
 import { PublicKey } from '@solana/web3.js'
 import { validateCreatePoolDraft } from '../lib/pools'
-import type { PoolView } from '../types/pool'
+import type { PoolView, RecurrenceType, VotingModeType, SplitTypeValue } from '../types/pool'
 
 interface PoolCreateProps {
   onCreated: (pool: PoolView) => void
@@ -26,6 +27,12 @@ export function PoolCreate({ onCreated }: PoolCreateProps) {
   const [receiver, setReceiver] = useState('')
   const [target, setTarget] = useState('1')
   const [deadlineHours, setDeadlineHours] = useState('24')
+  
+  // Advanced options
+  const [recurrence, setRecurrence] = useState<RecurrenceType>('none')
+  const [maxCycles, setMaxCycles] = useState('0')
+  const [votingMode, setVotingMode] = useState<VotingModeType>('fixedReceiver')
+  const [splitType, setSplitType] = useState<SplitTypeValue>('equal')
 
   const receiverValue = receiver.trim()
   const validation = validateCreatePoolDraft({
@@ -38,6 +45,10 @@ export function PoolCreate({ onCreated }: PoolCreateProps) {
   const errors = validation.errors
 
   const regenerateSeed = () => setSeed(String(Date.now()))
+
+  const recurrenceLabel = { none: 'One-time', weekly: 'Weekly', monthly: 'Monthly' }[recurrence]
+  const votingLabel = { fixedReceiver: 'Fixed receiver', contributorVote: 'Voting by contributors' }[votingMode]
+  const splitLabel = { equal: 'Equal split', weighted: 'Weighted split' }[splitType]
 
   const steps = [
     {
@@ -61,8 +72,11 @@ export function PoolCreate({ onCreated }: PoolCreateProps) {
       fields: (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
           <div>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+              <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Seed</span>
+              <Tooltip text="A unique number that identifies this pool. Each pool needs a different seed. Click 'New seed' to generate a random one." />
+            </div>
             <Input
-              label="Seed"
               value={seed}
               onChange={(e) => setSeed(e.target.value)}
               type="number"
@@ -129,6 +143,127 @@ export function PoolCreate({ onCreated }: PoolCreateProps) {
       canNext: !errors.deadlineHours,
     },
     {
+      title: 'Advanced options',
+      desc: 'Configure pool behavior (optional)',
+      fields: (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          {/* Recurrence */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+              <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Recurrence</span>
+              <Tooltip text="Set if the pool should repeat automatically. Weekly/Monthly pools reset after closing and start a new collection cycle. Useful for regular expenses like rent or subscriptions." />
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {(['none', 'weekly', 'monthly'] as RecurrenceType[]).map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => setRecurrence(r)}
+                  style={{
+                    flex: 1,
+                    padding: '10px 12px',
+                    borderRadius: 'var(--r-md)',
+                    border: `1px solid ${recurrence === r ? 'var(--accent)' : 'var(--border)'}`,
+                    background: recurrence === r ? 'var(--accent-bg)' : 'transparent',
+                    color: recurrence === r ? 'var(--accent)' : 'var(--text-secondary)',
+                    fontSize: 'var(--text-sm)',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  {r === 'none' ? 'One-time' : r === 'weekly' ? 'Weekly' : 'Monthly'}
+                </button>
+              ))}
+            </div>
+            {recurrence !== 'none' && (
+              <Input
+                label="Max cycles (0 = unlimited)"
+                value={maxCycles}
+                onChange={(e) => setMaxCycles(e.target.value)}
+                type="number"
+                min={0}
+                style={{ marginTop: 12 }}
+              />
+            )}
+          </div>
+
+          {/* Voting Mode */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+              <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Receiver selection</span>
+              <Tooltip text="Choose how the fund receiver is determined. 'Fixed' sends funds to the address you specify. 'Voting' lets contributors vote with their contributions — the candidate with most votes receives the funds." />
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {(['fixedReceiver', 'contributorVote'] as VotingModeType[]).map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setVotingMode(v)}
+                  style={{
+                    flex: 1,
+                    padding: '10px 12px',
+                    borderRadius: 'var(--r-md)',
+                    border: `1px solid ${votingMode === v ? 'var(--accent)' : 'var(--border)'}`,
+                    background: votingMode === v ? 'var(--accent-bg)' : 'transparent',
+                    color: votingMode === v ? 'var(--accent)' : 'var(--text-secondary)',
+                    fontSize: 'var(--text-sm)',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  {v === 'fixedReceiver' ? 'Fixed' : 'Voting'}
+                </button>
+              ))}
+            </div>
+            <p style={{ marginTop: 6, fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
+              {votingMode === 'fixedReceiver' 
+                ? 'Receiver is set at creation. Funds go directly to them.'
+                : 'Contributors vote with their contributions. Winner gets the funds.'}
+            </p>
+          </div>
+
+          {/* Split Type */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+              <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Split mode</span>
+              <Tooltip text="Determine how funds are distributed among members. 'Equal' divides the amount evenly. 'Weighted' lets you assign different shares based on each member's contribution or agreement." />
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {(['equal', 'weighted'] as SplitTypeValue[]).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setSplitType(s)}
+                  style={{
+                    flex: 1,
+                    padding: '10px 12px',
+                    borderRadius: 'var(--r-md)',
+                    border: `1px solid ${splitType === s ? 'var(--accent)' : 'var(--border)'}`,
+                    background: splitType === s ? 'var(--accent-bg)' : 'transparent',
+                    color: splitType === s ? 'var(--accent)' : 'var(--text-secondary)',
+                    fontSize: 'var(--text-sm)',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  {s === 'equal' ? 'Equal' : 'Weighted'}
+                </button>
+              ))}
+            </div>
+            <p style={{ marginTop: 6, fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
+              {splitType === 'equal'
+                ? 'Split equally among all members.'
+                : 'Assign weights to members for proportional split.'}
+            </p>
+          </div>
+        </div>
+      ),
+      canNext: true,
+    },
+    {
       title: 'Ready to create',
       desc: 'Review and confirm.',
       fields: (
@@ -161,6 +296,18 @@ export function PoolCreate({ onCreated }: PoolCreateProps) {
               <div style={{ color: 'var(--text-muted)', fontSize: 'var(--text-xs)', marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Deadline</div>
               <div style={{ fontWeight: 600 }}>{deadlineHours} hours</div>
             </div>
+            <div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 'var(--text-xs)', marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Recurrence</div>
+              <div style={{ fontWeight: 600 }}>{recurrenceLabel}{recurrence !== 'none' && maxCycles !== '0' ? ` (${maxCycles}x)` : ''}</div>
+            </div>
+            <div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 'var(--text-xs)', marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Receiver mode</div>
+              <div style={{ fontWeight: 600 }}>{votingLabel}</div>
+            </div>
+            <div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 'var(--text-xs)', marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Split</div>
+              <div style={{ fontWeight: 600 }}>{splitLabel}</div>
+            </div>
           </div>
         </div>
       ),
@@ -185,10 +332,17 @@ export function PoolCreate({ onCreated }: PoolCreateProps) {
       const targetBn = solToLamports(Number(target))
       const deadline = new BN(Math.floor(Date.now() / 1000) + Number(deadlineHours) * 3600)
       const receiverPk = receiverValue ? new PublicKey(receiverValue) : wallet.publicKey
+      
+      const recurrenceEnum = recurrence === 'none' ? { none: {} } : recurrence === 'weekly' ? { weekly: {} } : { monthly: {} }
+      const votingEnum = votingMode === 'fixedReceiver' ? { fixedReceiver: {} } : { contributorVote: {} }
+      const splitEnum = splitType === 'equal' ? { equal: {} } : { weighted: {} }
+      
+      console.log('Creating pool with enums:', { recurrence, votingMode, splitType, recurrenceEnum, votingEnum, splitEnum });
+      
       const pool = derivePoolPda(wallet.publicKey, seedBn)
       const vault = deriveVaultPda(pool)
       const signature = await program.methods
-        .createPool(seedBn, name, targetBn, deadline, receiverPk)
+        .createPool(seedBn, name, targetBn, deadline, receiverPk, recurrenceEnum, Number(maxCycles), votingEnum, splitEnum)
         .accounts({ organizer: wallet.publicKey, pool, vault, systemProgram: PublicKey.default })
         .rpc()
       toast({
@@ -199,7 +353,21 @@ export function PoolCreate({ onCreated }: PoolCreateProps) {
         actionHref: explorerTxUrl(signature),
       })
       const fetched = await fetchPool(pool)
-      onCreated(fetched ?? { address: pool, name, targetAmount: targetBn, totalContributed: new BN(0), deadline, status: { open: {} }, organizer: wallet.publicKey, receiver: receiverPk, seed: seedBn })
+      onCreated(fetched ?? { 
+        address: pool, 
+        name, 
+        targetAmount: targetBn, 
+        totalContributed: new BN(0), 
+        deadline, 
+        status: { open: {} }, 
+        organizer: wallet.publicKey, 
+        receiver: receiverPk, 
+        seed: seedBn,
+        recurrence,
+        maxCycles: Number(maxCycles),
+        votingMode,
+        splitType,
+      })
     } catch (error) {
       toast({ type: 'error', message: 'Failed to create pool', description: error instanceof Error ? error.message.slice(0, 80) : undefined })
     } finally {
@@ -232,7 +400,10 @@ export function PoolCreate({ onCreated }: PoolCreateProps) {
         </div>
 
         <div style={{ marginBottom: 8 }}>
-          <h3 style={{ fontSize: 'var(--text-xl)', fontWeight: 700, marginBottom: 4 }}>{current.title}</h3>
+          <h3 style={{ fontSize: 'var(--text-xl)', fontWeight: 700, marginBottom: 4 }}>
+            {step === steps.length - 2 && <Settings size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />}
+            {current.title}
+          </h3>
           <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>{current.desc}</p>
         </div>
 

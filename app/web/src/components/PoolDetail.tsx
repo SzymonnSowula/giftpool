@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Clock, Target, Users, Wallet, CheckCircle, AlertTriangle, Share2, ExternalLink, Info } from 'lucide-react'
+import { ArrowLeft, Clock, Target, Users, Wallet, CheckCircle, AlertTriangle, Share2, ExternalLink, Info, RefreshCw, ListChecks, Vote, Split } from 'lucide-react'
 import { useProgram, deriveVaultPda, deriveContributionPda, solToLamports, lamportsToSol, explorerTxUrl } from '../hooks/useProgram'
 import { useToast } from './ui/Toast'
 import { Button } from './ui/Button'
@@ -84,7 +84,7 @@ export function PoolDetail({ pool, onBack, onUpdated }: PoolDetailProps) {
       const vault = deriveVaultPda(poolPublicKey)
       const contribution = deriveContributionPda(poolPublicKey, wallet.publicKey)
       const signature = await program.methods
-        .contribute(solToLamports(amountSol))
+        .contribute(solToLamports(amountSol), 0) // candidate_index = 0 (default)
         .accounts({ contributor: wallet.publicKey, pool: poolPublicKey, vault, contribution, systemProgram: PublicKey.default })
         .rpc()
       await refreshPool()
@@ -242,6 +242,39 @@ export function PoolDetail({ pool, onBack, onUpdated }: PoolDetailProps) {
           <Stat label="Progress" value={Math.round(Math.min(100, progress))} suffix="%" color={phase.targetMet ? 'var(--success)' : undefined} icon={<Wallet size={14} />} delay={3} />
         </div>
 
+        {/* Pool Features */}
+        {(pool.recurrence !== 'none' || pool.votingMode !== 'fixedReceiver' || pool.splitType !== 'equal' || (pool.milestonesCount ?? 0) > 0) && (
+          <div style={{ padding: '0 var(--space-6) var(--space-4)', borderBottom: '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
+              {pool.recurrence && pool.recurrence !== 'none' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 'var(--r-sm)', background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--accent)' }}>
+                  <RefreshCw size={12} />
+                  {pool.recurrence === 'weekly' ? 'Weekly' : 'Monthly'}
+                  {pool.maxCycles ? ` (${pool.cycleCount ?? 0}/${pool.maxCycles})` : ''}
+                </div>
+              )}
+              {pool.votingMode === 'contributorVote' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 'var(--r-sm)', background: 'var(--info-bg)', border: '1px solid var(--info-border)', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--info)' }}>
+                  <Vote size={12} />
+                  Voting mode
+                </div>
+              )}
+              {pool.splitType && pool.splitType !== 'equal' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 'var(--r-sm)', background: 'var(--warning-bg)', border: '1px solid var(--warning-border)', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--warning)' }}>
+                  <Split size={12} />
+                  Weighted split
+                </div>
+              )}
+              {(pool.milestonesCount ?? 0) > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 'var(--r-sm)', background: 'var(--success-bg)', border: '1px solid var(--success-border)', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--success)' }}>
+                  <ListChecks size={12} />
+                  {pool.milestonesReleased ?? 0}/{pool.milestonesCount} milestones
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Progress */}
         <div style={{ padding: '0 var(--space-6) var(--space-6)', borderBottom: '1px solid var(--border)' }}>
           <div style={{ marginTop: 8 }}>
@@ -390,9 +423,47 @@ export function PoolDetail({ pool, onBack, onUpdated }: PoolDetailProps) {
                 key="closed"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                style={{ textAlign: 'center', padding: 'var(--space-4)', color: 'var(--text-muted)', fontSize: 'var(--text-sm)', fontWeight: 500 }}
+                style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
               >
-                Pool is closed.
+                <div style={{ textAlign: 'center', padding: 'var(--space-4)', color: 'var(--text-muted)', fontSize: 'var(--text-sm)', fontWeight: 500 }}>
+                  Pool is closed.
+                </div>
+                
+                {/* Rollover button for recurring pools */}
+                {isOrganizer && pool.recurrence && pool.recurrence !== 'none' && (
+                  <Button
+                    variant="secondary"
+                    size="lg"
+                    onClick={async () => {
+                      if (!program || !wallet) return
+                      setTxLoading('rollover')
+                      try {
+                        const signature = await program.methods
+                          .rolloverPool()
+                          .accounts({ organizer: wallet.publicKey, pool: poolPublicKey })
+                          .rpc()
+                        await refreshPool()
+                        toast({
+                          type: 'success',
+                          message: 'Pool rolled over',
+                          description: 'New cycle started',
+                          actionLabel: 'View on Explorer',
+                          actionHref: explorerTxUrl(signature),
+                        })
+                      } catch (error) {
+                        toast({ type: 'error', message: 'Rollover failed', description: error instanceof Error ? error.message.slice(0, 80) : undefined })
+                      } finally {
+                        setTxLoading(null)
+                      }
+                    }}
+                    loading={txLoading === 'rollover'}
+                    disabled={txLoading === 'rollover'}
+                    fullWidth
+                    icon={<RefreshCw size={16} />}
+                  >
+                    Start Next Cycle
+                  </Button>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
