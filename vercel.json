@@ -1,7 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "cd app/web && pnpm install",
-  "buildCommand": "cd app/web && pnpm build",
-  "outputDirectory": "app/web/dist",
+  "installCommand": "pnpm install",
+  "buildCommand": "pnpm build",
+  "outputDirectory": "dist",
   "framework": "vite"
 }
